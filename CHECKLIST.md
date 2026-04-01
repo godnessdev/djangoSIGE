@@ -157,21 +157,29 @@ Critério de aceite:
 
 Objetivo: atualizar a base visual para uma stack atual sem trocar a arquitetura do app.
 
-- [ ] mapear classes Bootstrap 3 usadas no projeto
-- [ ] migrar grid legado (`col-xs-*`, etc.) para grid atual
-- [ ] migrar componentes de navbar, dropdown, modal e tabs
-- [ ] revisar utilitarios removidos ou renomeados
-- [ ] revisar dependencias de JS especificas do Bootstrap 3
-- [ ] remover necessidade de `jQuery` nas partes que dependiam apenas do Bootstrap
-- [ ] validar compatibilidade de DataTables com a nova camada visual
+- [x] mapear classes Bootstrap 3 usadas no projeto
+- [x] migrar grid legado (`col-xs-*`, etc.) para grid atual
+- [x] migrar componentes de navbar, dropdown, modal e tabs
+- [x] revisar utilitarios removidos ou renomeados
+- [x] revisar dependencias de JS especificas do Bootstrap 3
+- [x] remover necessidade de `jQuery` nas partes que dependiam apenas do Bootstrap
+- [x] validar compatibilidade de DataTables com a nova camada visual
+
+Artefatos da fase:
+
+- [PHASE4_BOOTSTRAP5_MIGRATION.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE4_BOOTSTRAP5_MIGRATION.md)
+- [validate_phase4_bootstrap.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase4_bootstrap.py)
+- [bootstrap-compat.css](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/css/bootstrap-compat.css)
+- [bootstrap-compat.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/bootstrap/bootstrap-compat.js)
+- [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
 
 Testes da fase:
 
-- [ ] menus e dropdowns
-- [ ] tabs
-- [ ] modais
-- [ ] formularios e grids
-- [ ] telas de lista e dashboard
+- [x] menus e dropdowns
+- [x] tabs
+- [x] modais
+- [x] formularios e grids
+- [x] telas de lista e dashboard
 
 Critério de aceite:
 
@@ -317,7 +325,7 @@ Critério de aceite:
 - [x] Fase 1
 - [x] Fase 2
 - [x] Fase 3
-- [ ] Fase 4
+- [x] Fase 4
 - [ ] Fase 5
 - [ ] Fase 6
 - [ ] Fase 7
@@ -338,7 +346,7 @@ Melhor relacao risco/retorno:
 Modernizacao estrutural do frontend sem mudar arquitetura backend:
 
 - [x] concluir Fase 3
-- [ ] concluir Fase 4
+- [x] concluir Fase 4
 - [ ] iniciar Fase 5
 
 ## Escopo da Terceira Onda
