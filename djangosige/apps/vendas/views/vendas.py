@@ -12,11 +12,15 @@ from djangosige.apps.cadastro.models import MinhaEmpresa
 from djangosige.apps.login.models import Usuario
 from djangosige.configs.settings import MEDIA_ROOT
 
-from geraldo.generators import PDFGenerator
 from datetime import datetime
 import io
 
-from .report_vendas import VendaReport
+try:
+    from geraldo.generators import PDFGenerator
+    from .report_vendas import VendaReport
+except ImportError:
+    PDFGenerator = None
+    VendaReport = None
 
 
 class AdicionarVendaView(CustomCreateView):
@@ -442,6 +446,12 @@ class GerarCopiaPedidoVendaView(GerarCopiaVendaView):
 class GerarPDFVenda(CustomView):
 
     def gerar_pdf(self, title, venda, user_id):
+        if PDFGenerator is None or VendaReport is None:
+            return HttpResponse(
+                'Geracao de PDF indisponivel. Instale as dependencias opcionais em requirements_optional.txt.',
+                status=503,
+            )
+
         resp = HttpResponse(content_type='application/pdf')
 
         venda_pdf = io.BytesIO()

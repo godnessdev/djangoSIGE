@@ -13,11 +13,16 @@ from djangosige.apps.cadastro.models import MinhaEmpresa
 from djangosige.apps.estoque.models import ProdutoEstocado, EntradaEstoque, ItensMovimento
 from djangosige.apps.login.models import Usuario
 from djangosige.configs.settings import MEDIA_ROOT
-from .report_compras import CompraReport
 
-from geraldo.generators import PDFGenerator
 from datetime import datetime
 import io
+
+try:
+    from geraldo.generators import PDFGenerator
+    from .report_compras import CompraReport
+except ImportError:
+    PDFGenerator = None
+    CompraReport = None
 
 
 class AdicionarCompraView(CustomCreateView):
@@ -507,6 +512,12 @@ class ReceberPedidoCompraView(CustomView):
 class GerarPDFCompra(CustomView):
 
     def gerar_pdf(self, title, compra, user_id):
+        if PDFGenerator is None or CompraReport is None:
+            return HttpResponse(
+                'Geracao de PDF indisponivel. Instale as dependencias opcionais em requirements_optional.txt.',
+                status=503,
+            )
+
         resp = HttpResponse(content_type='application/pdf')
 
         compra_pdf = io.BytesIO()

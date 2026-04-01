@@ -1,0 +1,9 @@
+# Dependencias opcionais para recursos legados de PDF e NF-e.
+https://github.com/thiagopena/geraldo/archive/master.zip
+https://github.com/thiagopena/PySIGNFe/archive/master.zip
+reportlab>=4.2,<5
+pyOpenSSL>=26,<27
+cryptography>=46,<47
+lxml>=6,<7
+signxml>=4.4,<5
+pytz>=2026.1

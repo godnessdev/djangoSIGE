@@ -18,7 +18,20 @@ from djangosige.apps.vendas.models import PedidoVenda, ItensVenda
 try:
     from .processador_nf import ProcessadorNotaFiscal
 except ImportError:
-    pass
+    class ProcessadorNotaFiscal:  # pragma: no cover - fallback for missing optional deps
+        def __init__(self):
+            self.processo = None
+            self.message = (
+                'Recursos de NF-e indisponiveis. Instale as dependencias opcionais '
+                'em requirements_optional.txt.'
+            )
+            self.erro = True
+
+        def __getattr__(self, _name):
+            def _missing(*_args, **_kwargs):
+                return None
+
+            return _missing
 
 from decimal import Decimal
 from datetime import datetime
