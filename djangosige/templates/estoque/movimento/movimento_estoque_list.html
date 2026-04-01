@@ -1,4 +1,4 @@
-{%extends 'base/base.html'%}
+﻿{%extends 'base/base.html'%}
 
 {%block title%}{{title_complete|title}}{%endblock%}
 {%block content%}
@@ -26,8 +26,8 @@
                   <span class="caret"></span></button>
                   <ul class="dropdown-menu pull-right">
                     <li><a href="{% url 'estoque:addentradaestoqueview' %}">Entrada em estoque</a></li>
-                    <li><a href="{% url 'estoque:addsaidaestoqueview' %}">Saída de estoque</a></li>
-                    <li><a href="{% url 'estoque:addtransferenciaestoqueview' %}">Transferência de estoque</a></li>
+                    <li><a href="{% url 'estoque:addsaidaestoqueview' %}">SaÃ­da de estoque</a></li>
+                    <li><a href="{% url 'estoque:addtransferenciaestoqueview' %}">TransferÃªncia de estoque</a></li>
                   </ul>
                 </div>
                 {% endif %}
@@ -69,7 +69,7 @@
 {% block js %}
   {% load static %}
   <!-- JQuery Mask Input Js -->
-  <script src="{% static 'js/jquery.mask.js' %}"></script>
+  {% include 'base/load_jquery_mask.html' %}
   
   {% include 'base/load_jqueryui.html' %}
 

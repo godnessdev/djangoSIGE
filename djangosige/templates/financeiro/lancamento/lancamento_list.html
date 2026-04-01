@@ -1,4 +1,4 @@
-{%extends 'base/base.html'%}
+﻿{%extends 'base/base.html'%}
 
 {%block title%}{{title_complete|title}}{%endblock%}
 {%block content%}
@@ -72,7 +72,7 @@
 {% block js %}
   {% load static %}
   <!-- JQuery Mask Input Js -->
-  <script src="{% static 'js/jquery.mask.js' %}"></script>
+  {% include 'base/load_jquery_mask.html' %}
   
   {% include 'base/load_jqueryui.html' %}
 

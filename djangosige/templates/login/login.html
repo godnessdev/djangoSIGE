@@ -1,4 +1,4 @@
-{%extends 'base/base.html'%}
+﻿{%extends 'base/base.html'%}
 
 
 {%block title%}Login{%endblock%}
@@ -16,7 +16,7 @@
         	{% if not request.user.is_authenticated %}
             <form id="login" method="POST">
             	{% csrf_token %}
-                <div class="msg">Digite seu nome de usuário e a senha para entrar
+                <div class="msg">Digite seu nome de usuÃ¡rio e a senha para entrar
 
                 {% include 'base/form_error_msg.html' %}
 
@@ -35,7 +35,7 @@
 
                 <div class="row">
                     <div class="col-xs-8">
-                        <input type="checkbox" name="remember_me" id="remember_me" class="filled-in chk-col-light-blue">
+                        <input type="checkbox" name="remember_me" id="remember_me">
                         <label for="remember_me">Lembrar</label>
                     </div>
                     <div class="col-xs-4">
@@ -45,13 +45,12 @@
 
                 <div class="msg" style="margin-top:20px;">
                     <a href="{% url 'login:esqueceuview' %}">Esqueceu a senha?</a><br/>
-                    <small>*caso seja seu primeiro login, leia a <a href="https://github.com/thiagopena/djangoSIGE" style="font-size:inherit;">documentação</a></small>
+                    <small>*caso seja seu primeiro login, leia a <a href="https://github.com/thiagopena/djangoSIGE" style="font-size:inherit;">documentaÃ§Ã£o</a></small>
                 </div>
 
             </form>
             {%endif%}
 
-            {% include 'base/modal.html' %}
 
         </div>
     </div>

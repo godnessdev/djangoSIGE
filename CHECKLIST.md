@@ -32,20 +32,27 @@ Modernizar a stack e o visual do sistema sem alterar a estrutura funcional do pr
 
 Objetivo: congelar o estado atual e garantir que qualquer melhoria futura tenha comparacao objetiva.
 
-- [ ] registrar baseline visual das telas principais
-- [ ] registrar baseline tecnico das dependencias front atuais
-- [ ] mapear todos os plugins JS em uso real
-- [ ] mapear quais telas usam DataTables, jQuery UI, mask, datetimepicker e multi-select
-- [ ] mapear quais componentes dependem de Materialize
-- [ ] registrar tempo de carregamento aproximado das telas principais
-- [ ] registrar tamanho atual dos assets estaticos
+- [x] registrar baseline visual das telas principais
+- [x] registrar baseline tecnico das dependencias front atuais
+- [x] mapear todos os plugins JS em uso real
+- [x] mapear quais telas usam DataTables, jQuery UI, mask, datetimepicker e multi-select
+- [x] mapear quais componentes dependem de Materialize
+- [x] registrar tempo de carregamento aproximado das telas principais
+- [x] registrar tamanho atual dos assets estaticos
+
+Artefatos da fase:
+
+- [PHASE0_BASELINE.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE0_BASELINE.md)
+- [PHASE0_VISUAL_VALIDATION.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE0_VISUAL_VALIDATION.md)
+- [collect_phase0_baseline.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/collect_phase0_baseline.py)
+- [validate_phase0_visual.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase0_visual.py)
 
 Testes da fase:
 
-- [ ] `python manage.py check`
-- [ ] `python manage.py test djangosige.tests.validation`
-- [ ] `python contrib/validate_smoke.py`
-- [ ] validacao manual de `login`, `dashboard`, listas, formularios e modais
+- [x] `python manage.py check`
+- [x] `python manage.py test djangosige.tests.validation`
+- [x] `python contrib/validate_smoke.py`
+- [x] validacao manual de `login`, `dashboard`, listas, formularios e modais
 
 Critério de aceite:
 
@@ -55,20 +62,28 @@ Critério de aceite:
 
 Objetivo: limpar o terreno sem mudar HTML estrutural nem fluxo.
 
-- [ ] inventariar imports de CSS e JS em [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
-- [ ] remover duplicidades e dependencias nao usadas
-- [ ] padronizar ordem de carregamento de assets
-- [ ] revisar assets vendorizados antigos e substituir por versoes estaveis da mesma linha quando necessario
-- [ ] isolar CSS proprio do projeto do CSS de bibliotecas
-- [ ] separar overrides visuais do legado em uma camada previsivel
-- [ ] revisar se ha plugins front obsoletos que podem sair sem impacto
+- [x] inventariar imports de CSS e JS em [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
+- [x] remover duplicidades e dependencias nao usadas
+- [x] padronizar ordem de carregamento de assets
+- [x] revisar assets vendorizados antigos e substituir por versoes estaveis da mesma linha quando necessario
+- [x] isolar CSS proprio do projeto do CSS de bibliotecas
+- [x] separar overrides visuais do legado em uma camada previsivel
+- [x] revisar se ha plugins front obsoletos que podem sair sem impacto
+
+Artefatos da fase:
+
+- [PHASE1_STACK_HYGIENE.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE1_STACK_HYGIENE.md)
+- [validate_phase1_hygiene.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase1_hygiene.py)
+- [theme-overrides.css](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/css/theme-overrides.css)
+- [load_jquery_mask.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/load_jquery_mask.html)
+- [load_datetimepicker.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/load_datetimepicker.html)
 
 Testes da fase:
 
-- [ ] smoke das paginas com e sem DataTables
-- [ ] validacao manual dos menus laterais e dropdowns
-- [ ] validacao manual de modais e mascaras
-- [ ] comparar console do navegador antes/depois para erros JS
+- [x] smoke das paginas com e sem DataTables
+- [x] validacao manual dos menus laterais e dropdowns
+- [x] validacao manual de modais e mascaras
+- [x] comparar console do navegador antes/depois para erros JS
 
 Critério de aceite:
 
@@ -78,23 +93,31 @@ Critério de aceite:
 
 Objetivo: criar uma base visual moderna por cima do HTML atual.
 
-- [ ] definir tokens de design em CSS: cores, tipografia, espacamento, radius, sombras
-- [ ] consolidar variaveis visuais em um bloco central
-- [ ] padronizar topbar, sidebar, cards, tabelas, inputs, botoes e alertas
-- [ ] padronizar estilos de estados: hover, foco, erro, sucesso, desabilitado
-- [ ] melhorar legibilidade de tabelas densas
-- [ ] revisar responsividade real em mobile e notebook
-- [ ] padronizar tipografia para todo o sistema
-- [ ] revisar contraste e acessibilidade basica
+- [x] definir tokens de design em CSS: cores, tipografia, espacamento, radius, sombras
+- [x] consolidar variaveis visuais em um bloco central
+- [x] padronizar topbar, sidebar, cards, tabelas, inputs, botoes e alertas
+- [x] padronizar estilos de estados: hover, foco, erro, sucesso, desabilitado
+- [x] melhorar legibilidade de tabelas densas
+- [x] revisar responsividade real em mobile e notebook
+- [x] padronizar tipografia para todo o sistema
+- [x] revisar contraste e acessibilidade basica
+
+Artefatos da fase:
+
+- [PHASE2_DESIGN_SYSTEM.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE2_DESIGN_SYSTEM.md)
+- [validate_phase2_design.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase2_design.py)
+- [theme-overrides.css](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/css/theme-overrides.css)
+- [404.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/404.html)
+- [500.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/500.html)
 
 Testes da fase:
 
-- [ ] revisao visual em `login`
-- [ ] revisao visual em `dashboard`
-- [ ] revisao visual em telas de lista
-- [ ] revisao visual em telas de formulario
-- [ ] revisao visual em modais
-- [ ] revisao visual em paginas de erro `404` e `500`
+- [x] revisao visual em `login`
+- [x] revisao visual em `dashboard`
+- [x] revisao visual em telas de lista
+- [x] revisao visual em telas de formulario
+- [x] revisao visual em modais
+- [x] revisao visual em paginas de erro `404` e `500`
 
 Critério de aceite:
 
@@ -104,18 +127,27 @@ Critério de aceite:
 
 Objetivo: eliminar uma fonte de peso e conflito visual.
 
-- [ ] identificar componentes realmente dependentes de `materialize.css`
-- [ ] substituir estilos herdados de Materialize por CSS proprio ou Bootstrap moderno
-- [ ] remover classes que existem apenas por causa do Materialize
-- [ ] validar checkboxes, radios, inputs e efeitos de foco apos a retirada
-- [ ] remover import de Materialize quando a cobertura estiver completa
+- [x] identificar componentes realmente dependentes de `materialize.css`
+- [x] substituir estilos herdados de Materialize por CSS proprio ou Bootstrap moderno
+- [x] remover classes que existem apenas por causa do Materialize
+- [x] validar checkboxes, radios, inputs e efeitos de foco apos a retirada
+- [x] remover import de Materialize quando a cobertura estiver completa
+
+Artefatos da fase:
+
+- [PHASE3_MATERIALIZE_REMOVAL.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE3_MATERIALIZE_REMOVAL.md)
+- [validate_phase3_materialize.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase3_materialize.py)
+- [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
+- [login.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/login/login.html)
+- [admin.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/admin.js)
+- [theme-overrides.css](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/css/theme-overrides.css)
 
 Testes da fase:
 
-- [ ] formularios com checkbox e radio
-- [ ] formularios com validacao visual
-- [ ] modais e dropdowns
-- [ ] tela de login
+- [x] formularios com checkbox e radio
+- [x] formularios com validacao visual
+- [x] modais e dropdowns
+- [x] tela de login
 
 Critério de aceite:
 
@@ -281,10 +313,10 @@ Critério de aceite:
 
 ## Ordem Recomendada de Execucao
 
-- [ ] Fase 0
-- [ ] Fase 1
-- [ ] Fase 2
-- [ ] Fase 3
+- [x] Fase 0
+- [x] Fase 1
+- [x] Fase 2
+- [x] Fase 3
 - [ ] Fase 4
 - [ ] Fase 5
 - [ ] Fase 6
@@ -296,16 +328,16 @@ Critério de aceite:
 
 Melhor relacao risco/retorno:
 
-- [ ] concluir Fase 0
-- [ ] concluir Fase 1
-- [ ] concluir Fase 2
-- [ ] iniciar Fase 3
+- [x] concluir Fase 0
+- [x] concluir Fase 1
+- [x] concluir Fase 2
+- [x] iniciar Fase 3
 
 ## Escopo da Segunda Onda
 
 Modernizacao estrutural do frontend sem mudar arquitetura backend:
 
-- [ ] concluir Fase 3
+- [x] concluir Fase 3
 - [ ] concluir Fase 4
 - [ ] iniciar Fase 5
 

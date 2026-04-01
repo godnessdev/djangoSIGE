@@ -1,8 +1,8 @@
-{% block js %}
+﻿{% block js %}
     
   {% load static %}
   <!-- JQuery Mask Input Js -->
-  <script src="{% static 'js/jquery.mask.js' %}"></script>
+  {% include 'base/load_jquery_mask.html' %}
 
   {% include 'base/load_jqueryui.html' %}
 

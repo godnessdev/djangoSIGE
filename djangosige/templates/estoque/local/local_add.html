@@ -1,4 +1,4 @@
-{%extends 'base/base.html'%}
+﻿{%extends 'base/base.html'%}
 
 {%block title%}{{title_complete|title}}{%endblock%}
 {%block content%}
@@ -17,7 +17,7 @@
             <h2>
               <a href="{{return_url}}"><i class="material-icons">&#xE5C4;</i></a>{{title_complete}}
             </h2>
-            <div><small>Campos marcados com <strong style="color:red;">*</strong> são obrigatórios.</small></div>
+            <div><small>Campos marcados com <strong style="color:red;">*</strong> sÃ£o obrigatÃ³rios.</small></div>
 
           </div>
           <!--# Header-->
@@ -61,8 +61,7 @@
     
   {% load static %}
   <!-- JQuery UI Css/Js -->
-  <link href="{% static 'css/jquery-ui/jquery-ui.min.css' %}" rel="stylesheet">
-  <script src="{% static 'js/jquery-ui.min.js' %}"></script>
+  {% include 'base/load_jqueryui.html' %}
 
   <script type="text/javascript">
     var cfop_path = '{% static 'tabelas/cfop/cfop_2015_002.csv' %}'

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -16,13 +16,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" type="text/css">
 
-    <!-- Bootstrap Css -->
+    <!-- Vendor Css -->
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
 
-    <!-- Css -->
+    <!-- App Css -->
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'css/theme-overrides.css' %}" rel="stylesheet">
 
-    <!-- Jquery 3.0.0 Js -->
+    <!-- Core Js -->
     <script src="{% static 'js/jquery/jquery-3.0.0.min.js' %}"></script>
 
 
@@ -107,7 +108,7 @@
                             <li role="seperator" class="divider"></li>
                             <li><a {% if user_empresa %} href="{% url 'cadastro:editarempresaview' user_empresa.id %}"{%else%} class="popup" title="Selecionar Empresa" href="{% url 'login:selecionarempresaview' %}" {%endif%}><i class="material-icons">&#xE0AF;</i>Minha Empresa</a></li>
                             <li role="seperator" class="divider"></li>
-                            <li><a href="{% url 'login:usuariosview' %}"><i class="material-icons">&#xE7FB;</i>Usuários</a></li>
+                            <li><a href="{% url 'login:usuariosview' %}"><i class="material-icons">&#xE7FB;</i>UsuÃ¡rios</a></li>
                             <li role="seperator" class="divider"></li>
                             <li><a id="logout-btn" href="{% url 'login:logoutview' %}" title="Sair" ><i class="material-icons">&#xE879;</i>Sair</a></li>
                         </ul>
@@ -122,7 +123,7 @@
                     <li>
                         <a href="{% url 'base:index' %}">
                             <i class="material-icons">&#xE88A;</i>
-                            <span>Página Inicial</span>
+                            <span>PÃ¡gina Inicial</span>
                         </a>
                     </li>
 
@@ -150,7 +151,7 @@
                             <!--
                             <li>
                                 <a href="javascript:void(0);">
-                                    Serviços
+                                    ServiÃ§os
                                 </a>
                             </li>
                             -->
@@ -198,7 +199,7 @@
                         <ul class="ml-menu">
                             <li>
                                 <a href="{% url 'vendas:listaorcamentovendaview' %}">
-                                    Orçamentos de venda
+                                    OrÃ§amentos de venda
                                 </a>
                             </li>
 
@@ -210,7 +211,7 @@
 
                             <li>
                                 <a href="{% url 'vendas:listacondicaopagamentoview' %}">
-                                    Condições de pagamento
+                                    CondiÃ§Ãµes de pagamento
                                 </a>
                             </li>
 
@@ -225,7 +226,7 @@
                         <ul class="ml-menu">
                             <li>
                                 <a href="{% url 'compras:listaorcamentocompraview' %}">
-                                    Orçamentos de Compra
+                                    OrÃ§amentos de Compra
                                 </a>
                             </li>
                             <li>
@@ -235,7 +236,7 @@
                             </li>
                             <li>
                                 <a href="{% url 'vendas:listacondicaopagamentoview' %}">
-                                    Condições de pagamento
+                                    CondiÃ§Ãµes de pagamento
                                 </a>
                             </li>
 
@@ -266,14 +267,14 @@
                                     </li>
                                     <li>
                                         <a href="{% url 'fiscal:configuracaonotafiscal' %}">
-                                            Configuração NF-e
+                                            ConfiguraÃ§Ã£o NF-e
                                         </a>
                                     </li>
                                 </ul>
                             </li>
                             <li>
                                 <a href="{% url 'fiscal:listanaturezaoperacaoview' %}">
-                                    Natureza da operação
+                                    Natureza da operaÃ§Ã£o
                                 </a>
                             </li>
                             <li>
@@ -283,7 +284,7 @@
                             </li>
                             <li>
                                 <a href="javascript:void(0);" class="menu-toggle">
-                                    Comunicação SEFAZ
+                                    ComunicaÃ§Ã£o SEFAZ
                                 </a>
                                 <ul class="ml-menu">
                                     <li>
@@ -308,7 +309,7 @@
                                     </li>
                                     <li>
                                         <a href="{% url 'fiscal:manifestacaodestinatario' %}">
-                                            Manifestação do destinatário
+                                            ManifestaÃ§Ã£o do destinatÃ¡rio
                                         </a>
                                     </li>
                                 </ul>
@@ -336,7 +337,7 @@
 
                             <li>
                                 <a href="{% url 'financeiro:listalancamentoview' %}">
-                                    Lançamentos
+                                    LanÃ§amentos
                                 </a>
                             </li>
 
@@ -397,12 +398,12 @@
                             </li>
                             <li>
                                 <a href="javascript:void(0);" class="menu-toggle">
-                                    Movimentações de estoque
+                                    MovimentaÃ§Ãµes de estoque
                                 </a>
                                 <ul class="ml-menu">
                                     <li>
                                         <a href="{% url 'estoque:listamovimentoestoqueview' %}">
-                                            Todas movimentações
+                                            Todas movimentaÃ§Ãµes
                                         </a>
                                     </li>
                                     <li>
@@ -412,12 +413,12 @@
                                     </li>
                                     <li>
                                         <a href="{% url 'estoque:listasaidasestoqueview' %}">
-                                            Saídas
+                                            SaÃ­das
                                         </a>
                                     </li>
                                     <li>
                                         <a href="{% url 'estoque:listatransferenciasestoqueview' %}">
-                                            Transferências
+                                            TransferÃªncias
                                         </a>
                                     </li>
                                 </ul>
@@ -434,7 +435,7 @@
                     &copy; 2017 <a href=""> DjangoSIGE</a>.
                 </div>
                 <div class="version">
-                    <b>Versão: </b> {{versao}}
+                    <b>VersÃ£o: </b> {{versao}}
                 </div>
             </div>
             <!-- #Footer -->
@@ -477,3 +478,5 @@
 </body>
 
 </html>
+
+

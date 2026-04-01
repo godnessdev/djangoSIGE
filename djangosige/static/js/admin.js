@@ -3258,9 +3258,9 @@ $.Admin.dinamicMenu = {
         if (1 in element){
             element = $(element[1]);
             if (element.has("i").length == 0) {
-                element.addClass('toggled waves-effect waves-block');
+                element.addClass('toggled');
                 element.parents('li').addClass('active');
-                element.parent().parents('ul').show().siblings('a').addClass('toggled waves-effect waves-block')
+                element.parent().parents('ul').show().siblings('a').addClass('toggled')
             }
         }
     }

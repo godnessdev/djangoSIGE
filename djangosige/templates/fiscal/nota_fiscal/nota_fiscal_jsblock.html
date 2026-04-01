@@ -1,14 +1,12 @@
 {% load static %}
 <!-- JQuery Mask Input Js -->
-<script src="{% static 'js/jquery.mask.js' %}"></script>
+{% include 'base/load_jquery_mask.html' %}
 
 {% include 'base/load_jqueryui.html' %}
 
 {% include 'base/tooltip_js.html' %}
 
-<!-- Datetimepicker Css/Js -->
-<link href="{% static 'css/jquery.datetimepicker.css' %}" rel="stylesheet">
-<script src="{% static 'js/jquery.datetimepicker.full.min.js' %}"></script>
+{% include 'base/load_datetimepicker.html' %}
 
 {% include 'base/datetimepicker_js.html' %}
 
