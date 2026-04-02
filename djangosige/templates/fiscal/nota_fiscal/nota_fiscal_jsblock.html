@@ -25,6 +25,7 @@
 	var tipo_nf = 'entrada';
 	{% endif %}
 
+  	ProgressiveEnhancement.initNotaFiscal(req_urls, tipo_nf);
   	$.Admin.notaFiscalForm.init(req_urls, tipo_nf);
   	$.Admin.maskInput.maskNotaFiscal();  
 </script>

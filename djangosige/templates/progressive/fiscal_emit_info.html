@@ -1,0 +1,22 @@
+<div id="emit-info-panel" class="progressive-info-panel" x-data="{ loading: false }"
+     @htmx:before-request.window="if ($event.detail.elt && ($event.detail.elt.id === 'id_emit_saida' || $event.detail.elt.id === 'id_emit_entrada')) loading = true"
+     @htmx:after-swap.window="if ($event.detail.target.id === 'emit-info-panel') loading = false"
+     @htmx:response-error.window="if ($event.detail.target.id === 'emit-info-panel') loading = false">
+  <p class="progressive-info-status is-loading" x-cloak x-show="loading">Carregando dados do emitente...</p>
+  {% if not summary %}
+  <p class="progressive-info-empty">Selecione um emitente para carregar os dados fiscais.</p>
+  {% endif %}
+
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>CPF/CNPJ</label><span class="form-control display-emit-field" id="cpf_cnpj_emit">{{ summary.documento|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Inscrição Estadual/RG</label><span class="form-control display-emit-field" id="ie_rg_emit">{{ summary.inscricao|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Endereço</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="endereco_emit">{{ summary.logradouro|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>CEP</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="cep_emit">{{ summary.cep|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Número</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="nro_emit">{{ summary.numero|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Complemento</label><span class="form-control display-emit-field" id="cpl_emit">{{ summary.complemento|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Bairro</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="bairro_emit">{{ summary.bairro|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Cidade</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="cidade_emit">{{ summary.municipio|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Código município</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="cmun_emit">{{ summary.cmun|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Estado</label><strong style="color:red;"> *</strong><span class="form-control display-emit-field" id="estado_emit">{{ summary.uf|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Telefone</label><span class="form-control display-emit-field" id="tel_emit">{{ summary.telefone|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Email</label><span class="form-control display-emit-field" id="email_emit">{{ summary.email|default:"" }}</span></div></div></div>
+</div>

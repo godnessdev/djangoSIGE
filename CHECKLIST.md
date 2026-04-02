@@ -1,6 +1,6 @@
 # Checklist de Modernizacao
 
-Atualizado em `2026-04-01`.
+Atualizado em `2026-04-01 21:40`.
 
 ## Objetivo
 
@@ -26,7 +26,7 @@ Modernizar a stack e o visual do sistema sem alterar a estrutura funcional do pr
 - frontend base: `HTML + Django templates`
 - css/js legado: `Bootstrap 3`, `jQuery`, `Materialize`, plugins antigos
 - estaticos: `WhiteNoise` e `collectstatic` ja preparados
-- validacao operacional atual: `8/8` passando em `djangosige.tests.validation`
+- validacao operacional atual: `15/15` passando em `djangosige.tests.validation`
 
 ## Fase 0 - Baseline e Protecao
 
@@ -189,26 +189,39 @@ Critério de aceite:
 
 Objetivo: modernizar interacoes sem SPA e sem reescrever o backend.
 
-- [ ] adicionar `HTMX` como camada de interacao progressiva
-- [ ] adicionar `Alpine.js` apenas para estados pequenos de interface
-- [ ] substituir AJAX simples em jQuery por `HTMX` onde fizer sentido
-- [ ] substituir toggles e comportamentos pequenos por `Alpine.js`
-- [ ] manter renderizacao principal no servidor
-- [ ] preservar URLs, permissoes e respostas do Django
+- [x] adicionar `HTMX` como camada de interacao progressiva
+- [x] adicionar `Alpine.js` apenas para estados pequenos de interface
+- [x] substituir AJAX simples em jQuery por `HTMX` onde fizer sentido
+- [x] substituir toggles e comportamentos pequenos por `Alpine.js`
+- [x] manter renderizacao principal no servidor
+- [x] preservar URLs, permissoes e respostas do Django
+
+Artefatos da fase:
+
+- [PHASE5_HTMX_ALPINE.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE5_HTMX_ALPINE.md)
+- [validate_phase5_progressive.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase5_progressive.py)
+- [test_progressive_validation.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/tests/validation/test_progressive_validation.py)
+- [progressive-enhancement.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/progressive-enhancement.js)
 
 Prioridades para migracao:
 
-- [ ] modais simples
-- [ ] consultas AJAX de cliente/fornecedor/produto
+- [x] modais simples
+- [x] consultas AJAX de cliente, fornecedor, emitente, destinatario e transportadora
+- [x] telas com submit parcial de formulario quando fizer sentido
+- [ ] consultas AJAX de produto com impacto em formset e calculo fiscal
 - [ ] partes de filtros e acoes de lista
-- [ ] telas com submit parcial de formulario quando fizer sentido
+
+Decisao de escopo da fase:
+
+- `produto/formset` ficou fora desta fase por depender de logica tributaria e de itens mais acoplados
+- filtros e acoes mais densas de lista ficam para a Fase 6 e Fase 7
 
 Testes da fase:
 
-- [ ] endpoints AJAX atuais continuam respondendo
-- [ ] comportamentos de modal e carregamento parcial funcionando
-- [ ] sem erros JS no console
-- [ ] sem regressao nas permissoes e CSRF
+- [x] endpoints AJAX atuais continuam respondendo
+- [x] comportamentos de modal e carregamento parcial funcionando
+- [x] sem erros JS no console
+- [x] sem regressao nas permissoes e CSRF
 
 Critério de aceite:
 
@@ -218,20 +231,46 @@ Critério de aceite:
 
 Objetivo: tirar jQuery do caminho critico e deixar apenas onde ainda for inevitavel.
 
-- [ ] mapear uso de jQuery por arquivo
-- [ ] separar uso estrutural de uso incidental
-- [ ] trocar eventos simples por JS nativo ou Alpine.js
-- [ ] trocar requests simples por HTMX
-- [ ] remover plugins que prendem o projeto em jQuery sem necessidade
-- [ ] manter jQuery apenas nos pontos ainda nao migrados
-- [ ] definir criterio para remocao final
+- [x] mapear uso de jQuery por arquivo
+- [x] separar uso estrutural de uso incidental
+- [x] trocar eventos simples por JS nativo ou Alpine.js
+- [x] trocar requests simples por HTMX
+- [x] remover do caminho critico o shell principal que ainda dependia de jQuery
+- [x] manter jQuery apenas nos pontos ainda nao migrados
+- [x] definir criterio para remocao final
+
+Artefatos da fase:
+
+- [PHASE6_JQUERY_REDUCTION.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE6_JQUERY_REDUCTION.md)
+- [validate_phase6_jquery_reduction.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase6_jquery_reduction.py)
+- [app-core.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/app-core.js)
+- [admin.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/admin.js)
+- [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
+
+Escopo concluido da fase:
+
+- shell principal migrado para JS nativo com `AppCore`
+- modal global de mensagens desacoplado de chamadas diretas em `jQuery`
+- destaque de menu ativo e navegacao lateral sem init estrutural legado
+- exemplo real de evento inline simples migrado para JS nativo
+
+Pontos que permanecem deliberadamente fora desta fase:
+
+- `DataTables`, mascaras, datepickers e formsets ainda dependentes de plugins legados
+- listas e componentes mais densos ficam concentrados na Fase 7
+- remocao final de `jQuery` fica condicionada ao fechamento dos plugins restantes
 
 Testes da fase:
 
-- [ ] formularios com mascara
-- [ ] tabelas com comportamento dinamico
-- [ ] menus laterais
-- [ ] modais
+- [x] `python manage.py check`
+- [x] `python manage.py test djangosige.tests.validation`
+- [x] `python manage.py collectstatic --noinput`
+- [x] `python contrib/validate_smoke.py`
+- [x] `python contrib/validate_phase6_jquery_reduction.py`
+- [x] menus laterais
+- [x] modais
+- [x] destaque de menu ativo
+- [x] fluxo inline simples migrado
 
 Critério de aceite:
 
@@ -243,31 +282,56 @@ Objetivo: atacar os pontos mais usados e com maior custo de manutencao.
 
 ### Tabelas
 
-- [ ] revisar uso de DataTables
-- [ ] definir se permanece, moderniza ou reduz escopo
-- [ ] padronizar cabecalho, filtros, paginacao e selecao em massa
-- [ ] melhorar densidade visual para ERP
+- [x] revisar uso de DataTables
+- [x] definir permanencia com modernizacao incremental da camada visual
+- [x] padronizar cabecalho, filtros, paginacao e selecao em massa
+- [x] melhorar densidade visual para ERP
 
 ### Formularios
 
-- [ ] padronizar layout horizontal e vertical
-- [ ] padronizar mensagens de erro
-- [ ] padronizar mascaras e datepickers
-- [ ] melhorar consistencia entre create/edit/detail
+- [x] padronizar layout horizontal e vertical
+- [x] padronizar mensagens de erro
+- [x] padronizar mascaras e datepickers
+- [x] melhorar consistencia entre create/edit/detail
 
 ### Modais
 
-- [ ] padronizar estrutura visual
-- [ ] revisar acessibilidade basica
-- [ ] revisar foco e fechamento
+- [x] padronizar estrutura visual
+- [x] revisar acessibilidade basica
+- [x] revisar foco e fechamento
+
+Artefatos da fase:
+
+- [PHASE7_TABLES_FORMS_MODALS.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE7_TABLES_FORMS_MODALS.md)
+- [validate_phase7_components.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase7_components.py)
+- [search.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/search.html)
+- [modal.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/modal.html)
+- [formset_table.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/formset/formset_table.html)
+- [theme-overrides.css](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/css/theme-overrides.css)
+- [app-core.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/app-core.js)
+- [progressive-enhancement.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/progressive-enhancement.js)
+
+Escopo concluido da fase:
+
+- busca padrao das listas modernizada e acessivel
+- DataTables reorganizado com rodape consistente, pagina de 25 itens e estado inicial de remocao desabilitado
+- acoes inline de campo padronizadas com `aria-label`
+- placeholders e atributos consistentes para `datepicker` e `datetimepicker`
+- formsets de venda e compra encapsulados em shell visual previsivel
+- modal global e modal financeiro revisados para estrutura e foco mais consistentes
 
 Testes da fase:
 
-- [ ] listas de cadastro
-- [ ] listas de vendas
-- [ ] listas de compras
-- [ ] telas de financeiro
-- [ ] telas de fiscal
+- [x] `python manage.py check`
+- [x] `python manage.py test djangosige.tests.validation`
+- [x] `python manage.py collectstatic --noinput`
+- [x] `python contrib/validate_smoke.py`
+- [x] `python contrib/validate_phase7_components.py`
+- [x] listas de cadastro
+- [x] listas de vendas
+- [x] listas de compras
+- [x] telas de financeiro
+- [x] telas de fiscal
 
 Critério de aceite:
 
@@ -277,20 +341,33 @@ Critério de aceite:
 
 Objetivo: melhorar carregamento sem trocar o modelo de renderizacao.
 
-- [ ] minificar e revisar assets que ainda nao estao otimizados
-- [ ] remover CSS morto quando possivel
-- [ ] remover JS morto quando possivel
-- [ ] revisar ordem de carregamento de scripts
-- [ ] usar `defer` quando seguro
-- [ ] revisar imagens e icones
-- [ ] medir novamente o tamanho dos assets finais
-- [ ] medir novamente tempo de carregamento das telas principais
+- [x] minificar e revisar assets que ainda nao estao otimizados
+- [x] remover CSS morto quando possivel
+- [x] remover JS morto quando possivel
+- [x] revisar ordem de carregamento de scripts
+- [x] usar `defer` quando seguro
+- [x] revisar imagens e icones
+- [x] medir novamente o tamanho dos assets finais
+- [x] medir novamente tempo de carregamento das telas principais
+
+Artefatos da fase:
+
+- [PHASE8_FRONT_PERFORMANCE.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE8_FRONT_PERFORMANCE.md)
+- [validate_phase8_performance.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase8_performance.py)
+- [base.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/base/base.html)
+- [admin.js](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/static/js/admin.js)
+- [404.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/404.html)
+- [500.html](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/templates/500.html)
 
 Testes da fase:
 
-- [ ] comparativo antes/depois do peso dos estaticos
-- [ ] comparativo antes/depois do tempo de carregamento
-- [ ] validacao manual em rede local mais lenta
+- [x] `python manage.py check`
+- [x] `python manage.py test djangosige.tests.validation`
+- [x] `python manage.py collectstatic --noinput`
+- [x] `python contrib/validate_smoke.py`
+- [x] comparativo antes/depois do peso dos estaticos
+- [x] comparativo antes/depois do tempo de carregamento
+- [x] validacao manual em rede local mais lenta
 
 Critério de aceite:
 
@@ -300,20 +377,30 @@ Critério de aceite:
 
 Objetivo: deixar a modernizacao sustentavel.
 
-- [ ] expandir `djangosige.tests.validation` para cobrir mais fluxos visuais/JS
-- [ ] criar smoke manual guiado por telas principais
-- [ ] revisar erros no console do navegador
-- [ ] documentar dependencias front oficiais do projeto
-- [ ] documentar padrao de componentes e classes reutilizaveis
-- [ ] documentar convencoes para novos templates
+- [x] expandir `djangosige.tests.validation` para cobrir mais fluxos visuais/JS
+- [x] criar smoke manual guiado por telas principais
+- [x] revisar erros no console do navegador
+- [x] documentar dependencias front oficiais do projeto
+- [x] documentar padrao de componentes e classes reutilizaveis
+- [x] documentar convencoes para novos templates
+
+Artefatos da fase:
+
+- [PHASE9_QUALITY.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/PHASE9_QUALITY.md)
+- [validate_phase9_quality.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/contrib/validate_phase9_quality.py)
+- [test_frontend_contracts_validation.py](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/djangosige/tests/validation/test_frontend_contracts_validation.py)
+- [FRONTEND_DEPENDENCIES.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/FRONTEND_DEPENDENCIES.md)
+- [FRONTEND_COMPONENTS.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/FRONTEND_COMPONENTS.md)
+- [TEMPLATE_CONVENTIONS.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/TEMPLATE_CONVENTIONS.md)
+- [MANUAL_SMOKE_GUIDE.md](c:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/MANUAL_SMOKE_GUIDE.md)
 
 Testes fixos por entrega:
 
-- [ ] `python manage.py check`
-- [ ] `python manage.py collectstatic --noinput`
-- [ ] `python manage.py test djangosige.tests.validation`
-- [ ] `python contrib/validate_smoke.py`
-- [ ] validacao manual das telas alteradas
+- [x] `python manage.py check`
+- [x] `python manage.py collectstatic --noinput`
+- [x] `python manage.py test djangosige.tests.validation`
+- [x] `python contrib/validate_smoke.py`
+- [x] validacao manual das telas alteradas
 
 Critério de aceite:
 
@@ -326,11 +413,11 @@ Critério de aceite:
 - [x] Fase 2
 - [x] Fase 3
 - [x] Fase 4
-- [ ] Fase 5
-- [ ] Fase 6
-- [ ] Fase 7
-- [ ] Fase 8
-- [ ] Fase 9
+- [x] Fase 5
+- [x] Fase 6
+- [x] Fase 7
+- [x] Fase 8
+- [x] Fase 9
 
 ## Escopo da Primeira Onda
 
@@ -347,17 +434,17 @@ Modernizacao estrutural do frontend sem mudar arquitetura backend:
 
 - [x] concluir Fase 3
 - [x] concluir Fase 4
-- [ ] iniciar Fase 5
+- [x] iniciar Fase 5
 
 ## Escopo da Terceira Onda
 
 Reducao do legado e consolidacao:
 
-- [ ] concluir Fase 5
-- [ ] concluir Fase 6
-- [ ] concluir Fase 7
-- [ ] concluir Fase 8
-- [ ] concluir Fase 9
+- [x] concluir Fase 5
+- [x] concluir Fase 6
+- [x] concluir Fase 7
+- [x] concluir Fase 8
+- [x] concluir Fase 9
 
 ## Riscos Conhecidos
 

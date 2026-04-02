@@ -67,7 +67,7 @@
     {% if 'success' in message.tags %}
 
     <script type="text/javascript">
-        $.Admin.messages.msgSucesso("{{message}}");
+        AppCore.messages.success("{{message}}");
     </script>
     {%endif%}
     {%endfor%}

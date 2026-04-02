@@ -261,114 +261,9 @@
             </div>
           </div>
 
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>CPF/CNPJ</label>
-                <span class="form-control display-emit-field" id="cpf_cnpj_emit"></span>
-              </div>
-            </div>
-          </div>
+          {% include 'progressive/fiscal_emit_info.html' %}
 
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Inscrição Estadual/RG</label>
-                <span class="form-control display-emit-field" id="ie_rg_emit"></span>
-              </div>
-            </div>
-          </div>
         </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Endereço</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="endereco_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>CEP</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="cep_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Número</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="nro_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Complemento</label>
-                <span class="form-control display-emit-field" id="cpl_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Bairro</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="bairro_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Cidade</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="cidade_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Código município</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="cmun_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Estado</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-emit-field" id="estado_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Telefone</label>
-                <span class="form-control display-emit-field" id="tel_emit"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Email</label>
-                <span class="form-control display-emit-field" id="email_emit"></span>
-              </div>
-            </div>
-          </div>
 
         <div class="col-sm-12">
 
@@ -404,132 +299,8 @@
               </div>
             </div>
             
-            <div class="col-sm-4">
-              <div class="form-group">
-                <div class="form-line">
-                  <label>CPF/CNPJ/ID Estrangeiro</label>
-                  <span class="form-control display-dest-field" id="cpf_cnpj_id_dest"></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-sm-4">
-              <div class="form-group">
-                <div class="form-line">
-                  <label>Inscrição Estadual/RG</label>
-                  <span class="form-control display-dest-field" id="ie_rg_dest"></span>
-                </div>
-              </div>
-            </div>
           </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Indicador da IE do Destinatário</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="ind_ie_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-5">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Endereço</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="endereco_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-3">
-            <div class="form-group">
-              <div class="form-line">
-                <label>CEP</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="cep_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-3">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Número</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="nro_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-5">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Complemento</label>
-                <span class="form-control display-dest-field" id="cpl_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Bairro</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="bairro_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Cidade</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="cidade_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Código município</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="cmun_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Estado</label><strong style="color:red;"> *</strong>
-                <span class="form-control display-dest-field" id="estado_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>País</label>
-                <span class="form-control display-dest-field" id="pais_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Telefone</label>
-                <span class="form-control display-dest-field" id="tel_dest"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-sm-4">
-            <div class="form-group">
-              <div class="form-line">
-                <label>Email</label>
-                <span class="form-control display-dest-field" id="email_dest"></span>
-              </div>
-            </div>
-          </div>
+          {% include 'progressive/fiscal_dest_info.html' %}
 
         </div>
 
@@ -929,7 +700,7 @@
 
       {% if edit_nfe and saida %}
       <!-- Tab VALIDAÇÃO -->
-      <div role="tabpanel" class="tab-pane formset-tab active" id="validacao">
+      <div role="tabpanel" class="tab-pane formset-tab" id="validacao">
 
         <div class="col-sm-12 lista">
 
@@ -961,7 +732,7 @@
       <!-- #Tab VALIDAÇÃO -->
 
       <!-- Tab SEFAZ -->
-      <div role="tabpanel" class="tab-pane formset-tab active" id="sefaz">
+      <div role="tabpanel" class="tab-pane formset-tab" id="sefaz">
 
         <div class="col-sm-12 lista">
 

@@ -17,6 +17,10 @@
   --app-radius-sm: 12px;
 }
 
+[x-cloak] {
+  display: none !important;
+}
+
 body {
   background:
     radial-gradient(circle at top right, rgba(26, 155, 215, 0.14), transparent 30%),
@@ -396,6 +400,38 @@ fieldset[disabled] .form-control,
 .login-page .login-box a {
   color: var(--app-brand);
   font-weight: 600;
+}
+
+.progressive-info-panel {
+  position: relative;
+}
+
+.progressive-info-status {
+  margin: 0 0 14px;
+  color: var(--app-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.progressive-info-status.is-loading {
+  color: var(--app-brand);
+}
+
+.progressive-info-empty {
+  margin: 0 0 14px;
+  color: var(--app-text-soft);
+  font-size: 13px;
+}
+
+.progressive-inline-status {
+  margin-right: auto;
+  color: var(--app-text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.progressive-inline-status.is-loading {
+  color: var(--app-brand);
 }
 
 .login-page .btn-block {
@@ -1019,5 +1055,311 @@ textarea.form-control {
   .login-page .card .body,
   .four-zero-four .four-zero-four-container {
     padding: 24px 20px;
+  }
+}
+
+/* Phase 7 Tables, Forms and Modals ===================================== */
+.toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 76, 129, 0.1);
+  border-radius: 16px;
+  background: rgba(246, 250, 253, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.toolbar-search .input-group-addon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border-radius: 12px;
+  background: rgba(15, 76, 129, 0.08);
+  color: var(--app-brand);
+}
+
+.toolbar-search .form-line {
+  flex: 1 1 auto;
+}
+
+.toolbar-search .form-control {
+  border: none;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.toolbar-search .form-control:focus {
+  background: transparent;
+}
+
+.lista .card form > .body,
+.lista .card .body.lista,
+.card .body > .tab-content {
+  display: flow-root;
+}
+
+.lista .lista-content .body {
+  padding-top: 18px;
+}
+
+.app-datatable-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15, 76, 129, 0.08);
+}
+
+.app-datatable-length,
+.app-datatable-meta,
+.app-datatable-pager {
+  display: flex;
+  align-items: center;
+}
+
+.app-datatable-length select {
+  margin: 0 6px;
+}
+
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  min-width: 38px;
+  padding: 7px 10px !important;
+}
+
+.lista-remove,
+.lista-table td:last-child {
+  white-space: nowrap;
+}
+
+.lista-remove input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.delete-row td {
+  background: rgba(194, 86, 86, 0.08) !important;
+}
+
+.btn-remove.is-disabled,
+.btn-remove:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tab-pane {
+  padding-top: 4px;
+}
+
+.tab-pane::after,
+.body::after,
+.formset::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.form-group.has-validation-error > label:first-child,
+.form-group.has-validation-error .form-line > label:first-child {
+  color: var(--app-danger);
+}
+
+.form-group.has-field-action .input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.form-group.has-field-action .input-group .form-line {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.field-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(15, 76, 129, 0.14);
+  border-radius: 12px;
+  background: rgba(15, 76, 129, 0.05);
+  color: var(--app-success) !important;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.field-action:hover,
+.field-action:focus {
+  background: rgba(15, 76, 129, 0.11);
+  color: var(--app-brand) !important;
+}
+
+.field-action .material-icons {
+  font-size: 20px;
+}
+
+.is-choice-group .form-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  justify-content: flex-start;
+}
+
+.is-choice-group .form-line > label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.is-choice-group input[type="checkbox"],
+.is-choice-group input[type="radio"],
+.is-choice-group input[type="checkbox"].form-control,
+.is-choice-group input[type="radio"].form-control {
+  display: inline-block !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  flex: 0 0 18px;
+}
+
+input.datepicker,
+input.datetimepicker {
+  letter-spacing: 0.02em;
+}
+
+.app-formset-box {
+  display: grid;
+  gap: 16px;
+}
+
+.app-formset {
+  padding: 14px;
+  border: 1px solid rgba(15, 76, 129, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 251, 253, 0.86);
+}
+
+.formset-table-shell {
+  border-radius: 14px;
+}
+
+.formset-actions {
+  margin-top: 12px;
+  padding: 0;
+}
+
+.form-table thead th {
+  vertical-align: top;
+}
+
+.form-table .field-td {
+  min-width: 150px;
+}
+
+.modal-msg .modal-dialog,
+.modal_selecionar_data .modal-dialog,
+.imposto_modal .modal-dialog {
+  margin-top: 64px;
+}
+
+.modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-header .close:hover,
+.modal-header .close:focus {
+  opacity: 1;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-footer .btn {
+  min-width: 110px;
+}
+
+.modal-header small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+@media (max-width: 991px) {
+  .app-datatable-footer {
+    align-items: flex-start;
+  }
+
+  .app-datatable-length,
+  .app-datatable-meta,
+  .app-datatable-pager {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 767px) {
+  .toolbar-search {
+    padding: 8px 10px;
+  }
+
+  .toolbar-search .input-group-addon {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .field-action {
+    min-width: 42px;
+    padding: 0 10px;
+  }
+
+  .app-formset {
+    padding: 12px;
+  }
+
+  .modal-dialog {
+    margin-top: 18px;
   }
 }

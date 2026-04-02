@@ -3,7 +3,7 @@
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 
 from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView
 
@@ -588,6 +588,11 @@ class GerarLancamentoView(CustomView, MovimentoCaixaMixin):
             obj.save()
             if obj.movimentar_caixa:
                 self.atualizar_movimento_caixa(obj)
+
+        if request.headers.get('HX-Request') == 'true':
+            response = HttpResponse(status=204)
+            response['HX-Redirect'] = data['url']
+            return response
 
         return JsonResponse(data)
 

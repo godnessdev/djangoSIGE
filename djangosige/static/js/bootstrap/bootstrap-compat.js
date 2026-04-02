@@ -143,6 +143,18 @@
             }
         });
 
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest('[data-bs-toggle="tab"], [data-toggle="tab"], [data-bs-toggle="pill"], [data-toggle="pill"]');
+            if (!trigger) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            syncLegacyDataAttributes(document);
+            activateLegacyTab(trigger);
+        }, true);
+
         document.addEventListener('shown.bs.tab', function (event) {
             var current = event.target;
             var previous = event.relatedTarget;

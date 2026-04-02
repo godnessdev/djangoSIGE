@@ -1,32 +1,34 @@
-<div class="formset-box">
+<div class="formset-box app-formset-box">
 
   {% for form in formset %}
-  <div id="{{formset.prefix}}-{{forloop.counter0}}" class="formset" style="overflow-x: scroll;">
+  <div id="{{formset.prefix}}-{{forloop.counter0}}" class="formset app-formset">
 
-    <table class="table table-responsive table-bordered table-striped form-table">
-      <thead>
-        <tr>
-          {% for field in form.visible_fields %}
-          <th>{{field.label}}{% if field.errors %}<label class="error error-table">{% for error in field.errors %}{{error}}{% endfor %}</label>{% endif %}</th>      
-          {% endfor %}
-          <th><a class="remove-formset"></a></th>
-        </tr>
-      </thead>
+    <div class="table-responsive formset-table-shell">
+      <table class="table table-bordered table-striped form-table">
+        <thead>
+          <tr>
+            {% for field in form.visible_fields %}
+            <th>{{field.label}}{% if field.errors %}<label class="error error-table">{% for error in field.errors %}{{error}}{% endfor %}</label>{% endif %}</th>
+            {% endfor %}
+            <th><a class="remove-formset" aria-label="Remover item"></a></th>
+          </tr>
+        </thead>
 
-      <tbody>
-       <tr>
-          {% for field in form.visible_fields %}
-          <td class="field-td">{{field}}</td>
-          {% endfor %}
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
+        <tbody>
+         <tr>
+            {% for field in form.visible_fields %}
+            <td class="field-td">{{field}}</td>
+            {% endfor %}
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     {{ form.id }}
 
-    <div class="col-sm-12">
-      <a class="btn btn-xs add-formset" style="margin-bottom: 0px;">Adicionar novo</a>
+    <div class="col-sm-12 formset-actions">
+      <a class="btn btn-default btn-xs add-formset" style="margin-bottom: 0px;">Adicionar novo</a>
     </div>
   </div>
 

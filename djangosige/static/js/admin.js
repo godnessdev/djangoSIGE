@@ -121,6 +121,10 @@ $.Admin.navbar = {
 $.Admin.messages = {
     //Mensagens sucesso
     msgSucesso: function(message){
+        if(window.AppCore && window.AppCore.messages){
+            window.AppCore.messages.success(message);
+            return;
+        }
         $('#modal-msg .modal-header span i').text('done').addClass('icon-success');
         $('#modal-msg .modal-body p').text(message);
         $('#modal-msg .modal-title').text('Sucesso');
@@ -132,6 +136,10 @@ $.Admin.messages = {
 
     //Mensagem pergunta antes de remover
     msgRemove: function(message){
+        if(window.AppCore && window.AppCore.messages){
+            window.AppCore.messages.confirm(message);
+            return;
+        }
         $('#modal-msg .modal-header span i').text('error_outline').addClass('icon-alert');
         $('#modal-msg .modal-body p').text(message);
         $('#modal-msg .modal-title').text('Tem certeza?');
@@ -143,6 +151,10 @@ $.Admin.messages = {
 
     //Mensagem operação não permitida
     msgAlerta: function(message){
+        if(window.AppCore && window.AppCore.messages){
+            window.AppCore.messages.alert(message);
+            return;
+        }
         $('#modal-msg .modal-header span i').text('error_outline').addClass('icon-alert');
         $('#modal-msg .modal-body p').text(message);
         $('#modal-msg .modal-title').text('Operação não permitida');
@@ -150,6 +162,55 @@ $.Admin.messages = {
         $('#modal-msg #btn-ok').show();
         $('#modal-msg #btn-sim').hide();
         $('#modal-msg #btn-nao').hide();
+    }
+}
+
+$.Admin.assets = {
+    _loadedScripts: {},
+    _pendingCallbacks: {},
+
+    loadScript: function(url, callback) {
+        if (!url) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+
+        if (this._loadedScripts[url]) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+
+        if (this._pendingCallbacks[url]) {
+            if (typeof callback === 'function') {
+                this._pendingCallbacks[url].push(callback);
+            }
+            return;
+        }
+
+        this._pendingCallbacks[url] = [];
+        if (typeof callback === 'function') {
+            this._pendingCallbacks[url].push(callback);
+        }
+
+        var script = document.createElement('script');
+        script.src = url;
+        script.async = false;
+        script.onload = function() {
+            $.Admin.assets._loadedScripts[url] = true;
+            ($.Admin.assets._pendingCallbacks[url] || []).forEach(function(handler) {
+                handler();
+            });
+            delete $.Admin.assets._pendingCallbacks[url];
+        };
+        script.onerror = function() {
+            delete $.Admin.assets._pendingCallbacks[url];
+            throw new Error('Falha ao carregar o asset: ' + url);
+        };
+        document.body.appendChild(script);
     }
 }
 
@@ -249,6 +310,186 @@ $.Admin.table = {
             }
         });
 
+    },
+}
+
+$.Admin.table = {
+    _dateSortRegistered: false,
+
+    syncRemoveButton: function() {
+        var $btnRemove = $('.btn-remove');
+        var checkedCount = $('.lista-remove input[type=checkbox]:checked').length;
+
+        if (!$btnRemove.length) {
+            return;
+        }
+
+        $btnRemove.show();
+        $btnRemove.prop('disabled', checkedCount === 0);
+        $btnRemove.toggleClass('is-disabled', checkedCount === 0);
+        if (checkedCount > 0) {
+            $btnRemove.attr('title', 'Remover ' + checkedCount + ' item(ns) selecionado(s)');
+        } else {
+            $btnRemove.attr('title', 'Selecione ao menos um item para remover');
+        }
+    },
+
+    rebuildTableFooter: function($table, tableApi) {
+        var $wrapper = $table.closest('.dataTables_wrapper');
+        var $footer = $wrapper.find('.app-datatable-footer');
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+
+        if (!$wrapper.length) {
+            return;
+        }
+
+        if (!$footer.length) {
+            $footer = $('<div class="app-datatable-footer"></div>');
+            $table.after($footer);
+        }
+
+        if ($length.length && !$footer.find('.app-datatable-length').length) {
+            $('<div class="app-datatable-length"></div>').append($length).appendTo($footer);
+        }
+
+        if ($info.length && !$footer.find('.app-datatable-meta').length) {
+            $('<div class="app-datatable-meta"></div>').append($info).appendTo($footer);
+        }
+
+        if ($paginate.length && !$footer.find('.app-datatable-pager').length) {
+            $('<div class="app-datatable-pager"></div>').append($paginate).appendTo($footer);
+        }
+
+        if (tableApi && tableApi.page.len() !== 25) {
+            tableApi.page.len(25).draw(false);
+        }
+    },
+
+    ensurePlugin: function(callback) {
+        if (typeof $.fn.DataTable === 'function' && $.fn.dataTableExt) {
+            callback();
+            return;
+        }
+
+        var assetUrl = (window.SIGE_ASSETS && window.SIGE_ASSETS.dataTables) || '/static/js/jquery.dataTables.min.js';
+        $.Admin.assets.loadScript(assetUrl, callback);
+    },
+
+    registerDateSort: function() {
+        if (this._dateSortRegistered || !$.fn.dataTableExt) {
+            return;
+        }
+
+        $.fn.dataTableExt.aTypes.unshift(
+            function ( sData )
+            {
+                if (sData !== null && sData.match(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20|21)\d\d$/))
+                {
+                    return 'date-uk';
+                }
+                return null;
+            }
+        );
+
+        jQuery.extend( jQuery.fn.dataTableExt.oSort, {
+            "date-uk-pre": function ( a ) {
+                if (a == null || a == "") {
+                    return 0;
+                }
+                var ukDatea = a.split('/');
+                return (ukDatea[2] + ukDatea[1] + ukDatea[0]) * 1;
+            },
+
+            "date-uk-asc": function ( a, b ) {
+                return ((a < b) ? -1 : ((a > b) ? 1 : 0));
+            },
+
+            "date-uk-desc": function ( a, b ) {
+                return ((a < b) ? 1 : ((a > b) ? -1 : 0));
+            }
+        } );
+
+        this._dateSortRegistered = true;
+    },
+
+    init: function() {
+        var _this = this;
+        var $table = $('#lista-database');
+        var $btnRemove = $('.btn-remove');
+        var dTable = null;
+
+        if (!$table.length) {
+            return;
+        }
+
+        if (typeof $.fn.DataTable !== 'function' || !$.fn.dataTableExt) {
+            _this.ensurePlugin(function() {
+                _this.init();
+            });
+            return;
+        }
+
+        _this.registerDateSort();
+
+        dTable = $.fn.DataTable.isDataTable($table[0]) ? $table.DataTable() : $table.DataTable({
+            "dom" : 'ltipr',
+            "language" : {
+                "sEmptyTable": "Nenhum registro encontrado",
+                "sInfo": "Mostrando de _START_ atÃ© _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 atÃ© 0 de 0 registros",
+                "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                "sInfoPostFix": "",
+                "sInfoThousands": ".",
+                "sLengthMenu": "Mostrar _MENU_ resultados por pÃ¡gina",
+                "sLoadingRecords": "Carregando...",
+                "sProcessing": "Processando...",
+                "sZeroRecords": "Nenhum registro encontrado",
+                "sSearch": "Pesquisar",
+                "oPaginate": {
+                    "sNext": "PrÃ³ximo",
+                    "sPrevious": "Anterior",
+                    "sFirst": "Primeiro",
+                    "sLast": "Ãšltimo"
+                },
+                "oAria": {
+                    "sSortAscending": ": Ordenar colunas de forma ascendente",
+                    "sSortDescending": ": Ordenar colunas de forma descendente"
+                },
+            }
+        });
+
+        $('#search-bar').off('input.adminTable keyup.adminTable').on('input.adminTable keyup.adminTable', function(){
+            dTable.search($(this).val()).draw();
+        });
+
+        $('body').off('change.adminTableRemove').on('change.adminTableRemove', '.lista-remove input[type=checkbox]', function(event){
+            if(this.checked){
+                $(this).parents('tr').addClass("delete-row");
+            }else{
+                $(this).parents('tr').removeClass("delete-row");
+            }
+            _this.syncRemoveButton();
+        });
+
+        $btnRemove.off('click.adminTable').on('click.adminTable',function(event){
+            event.preventDefault();
+            var form = $(this).parents('form');
+            $.Admin.messages.msgRemove("Os items selecionados serÃ£o removidos permanentemente da Base de Dados.");
+            $('#btn-sim').one('click', function(){
+                form.submit();
+            });
+        });
+
+        $('body').off('click.adminTableRow').on('click.adminTableRow', '.clickable-row:not(.popup)', function(event){
+            if(!$(event.target).is("input, label, i, .prevent-click-row")){
+                window.document.location = $(this).data("href");
+            }
+        });
+
+        _this.rebuildTableFooter($table, dTable);
+        _this.syncRemoveButton();
     },
 }
 
@@ -989,31 +1230,35 @@ $.Admin.vendaForm = {
             $.Admin.maskInput.maskVenda();
         });
 
-        cli_input.on('change', function(){
-            if($(this).val()){
-                var postData = {
-                    'pessoaId': $(this).val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_cliente_url'], postData, _this.handleClienteInfo);
-            }else{
-                _this.handleClienteInfo();
-            }
-        });
-
-        cli_input.change();
-
-        transportadora_input.on('change', function(){
-            if($(this).val()){
-                var postData = {
-                    'transportadoraId': $(this).val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_transportadora_url'], postData, _this.handleTransportadoraInfo);
-            }else{
-                _this.handleTransportadoraInfo();
-            }
-        });
-
-        transportadora_input.change();
+          if(cli_input.data('progressive') !== 'htmx'){
+              cli_input.on('change', function(){
+                  if($(this).val()){
+                      var postData = {
+                          'pessoaId': $(this).val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_cliente_url'], postData, _this.handleClienteInfo);
+                  }else{
+                      _this.handleClienteInfo();
+                  }
+              });
+  
+              cli_input.change();
+          }
+  
+          if(transportadora_input.data('progressive') !== 'htmx'){
+              transportadora_input.on('change', function(){
+                  if($(this).val()){
+                      var postData = {
+                          'transportadoraId': $(this).val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_transportadora_url'], postData, _this.handleTransportadoraInfo);
+                  }else{
+                      _this.handleTransportadoraInfo();
+                  }
+              });
+  
+              transportadora_input.change();
+          }
 
         cond_pag_input.on('change', function(event, initial){
             if($(this).val()){
@@ -1947,18 +2192,20 @@ $.Admin.compraForm = {
         $.Admin.vendaForm.formTableInit();
         $.Admin.vendaForm.alterarFieldsModal(true);
 
-        for_input.on('change', function(){
-            if($(this).val()){
-                var postData = {
-                    'pessoaId': $(this).val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_fornecedor_url'], postData, _this.handleFornecedorInfo);
-            }else{
-                _this.handleFornecedorInfo();
-            }
-        });
-
-        for_input.change();
+          if(for_input.data('progressive') !== 'htmx'){
+              for_input.on('change', function(){
+                  if($(this).val()){
+                      var postData = {
+                          'pessoaId': $(this).val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_fornecedor_url'], postData, _this.handleFornecedorInfo);
+                  }else{
+                      _this.handleFornecedorInfo();
+                  }
+              });
+  
+              for_input.change();
+          }
 
         cond_pag_input.on('change', function(event, initial){
             if($(this).val()){
@@ -2647,19 +2894,21 @@ $.Admin.lancamentoForm = {
 
         });
 
-        $('#baixar_conta_confirma').on('click', function(){
-            var data_input = $('#id_data_pagamento');
-            if(!data_input.val() || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(data_input.val())){
-                data_input.css('border-color','red');
-            }else{
-                var postData = {
-                    'tipoConta': $('#id_tipo_conta').val(),
-                    'contaId': $('#id_conta_id').val(),
-                    'dataPagamento': $('#id_data_pagamento').val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['gerar_lancamento_url'], postData, _this.handleGerarLancamento);
-            }
-        });
+          if($('#baixar_conta_confirma').data('progressive') !== 'htmx'){
+              $('#baixar_conta_confirma').on('click', function(){
+                  var data_input = $('#id_data_pagamento');
+                  if(!data_input.val() || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(data_input.val())){
+                      data_input.css('border-color','red');
+                  }else{
+                      var postData = {
+                          'tipoConta': $('#id_tipo_conta').val(),
+                          'contaId': $('#id_conta_id').val(),
+                          'dataPagamento': $('#id_data_pagamento').val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['gerar_lancamento_url'], postData, _this.handleGerarLancamento);
+                  }
+              });
+          }
     },
 
     calcularTotalLiquido: function(){
@@ -2696,19 +2945,21 @@ $.Admin.lancamentoList = {
             }
         });
 
-        $('#baixar_conta_confirma').on('click', function(){
-            var data_input = $('#id_data_pagamento');
-            if(!data_input.val() || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(data_input.val())){
-                data_input.css('border-color','red');
-            }else{
-                var postData = {
-                    'tipoConta': $('#id_tipo_conta').val(),
-                    'contaId': $('#id_conta_id').val(),
-                    'dataPagamento': $('#id_data_pagamento').val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['gerar_lancamento_url'], postData, _this.handleGerarLancamento);
-            }
-        });
+          if($('#baixar_conta_confirma').data('progressive') !== 'htmx'){
+              $('#baixar_conta_confirma').on('click', function(){
+                  var data_input = $('#id_data_pagamento');
+                  if(!data_input.val() || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(data_input.val())){
+                      data_input.css('border-color','red');
+                  }else{
+                      var postData = {
+                          'tipoConta': $('#id_tipo_conta').val(),
+                          'contaId': $('#id_conta_id').val(),
+                          'dataPagamento': $('#id_data_pagamento').val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['gerar_lancamento_url'], postData, _this.handleGerarLancamento);
+                  }
+              });
+          }
     },
 
     handleGerarLancamento: function(data){
@@ -2732,18 +2983,20 @@ $.Admin.notaFiscalForm = {
         var fat_dup_chk = $('#id_grupo_cobr');
 
         //Ajax request emitente(empresa ou fornecedor)
-        emit_input.on('change', function(){
-            if($(this).val()){
-                var postData = {
-                    'pessoaId': $(this).val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_emit_url'], postData, _this.handleEmitInfo);
-            }else{
-                _this.handleEmitInfo();
-            }
-        });
-
-        emit_input.change();
+          if(emit_input.data('progressive') !== 'htmx'){
+              emit_input.on('change', function(){
+                  if($(this).val()){
+                      var postData = {
+                          'pessoaId': $(this).val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_emit_url'], postData, _this.handleEmitInfo);
+                  }else{
+                      _this.handleEmitInfo();
+                  }
+              });
+  
+              emit_input.change();
+          }
 
         fat_dup_chk.on('change', function(){
             var fat_chkd = $(this).is(':checked');
@@ -2761,17 +3014,19 @@ $.Admin.notaFiscalForm = {
         fat_dup_chk.change();
 
         //Ajax request destinatario(cliente ou empresa)
-        dest_input.on('change', function(){
-            if($(this).val()){
-                var postData = {
-                    'pessoaId': $(this).val(),
-                }
-                $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_dest_url'], postData, _this.handleDestInfo);
-            }else{
-                _this.handleEmitInfo();
-            }
-        });
-        dest_input.change();
+          if(dest_input.data('progressive') !== 'htmx'){
+              dest_input.on('change', function(){
+                  if($(this).val()){
+                      var postData = {
+                          'pessoaId': $(this).val(),
+                      }
+                      $.Admin.ajaxRequest.ajaxPostRequest(req_urls['info_dest_url'], postData, _this.handleDestInfo);
+                  }else{
+                      _this.handleEmitInfo();
+                  }
+              });
+              dest_input.change();
+          }
 
         //Ajax request Transacao: venda ou compra
         transacao_input.on('change', function(event, initial){
@@ -3267,12 +3522,7 @@ $.Admin.dinamicMenu = {
 };
 
 $(function () {
-    $.Admin.barraLateral.init();
-    $.Admin.navbar.init();
     $.Admin.table.init();
     $.Admin.formset.init();
     $.Admin.validation.init();
-    $.Admin.dinamicMenu.init();
-
-    setTimeout(function () { $('.page-loader-wrapper').fadeOut(); }, 50);
 });

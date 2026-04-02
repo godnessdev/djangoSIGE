@@ -95,17 +95,27 @@
   {% include 'base/tooltip_js.html' %}
     
    <script type="text/javascript">
-    $('body').on('click', '#importar_nota', function(){
-      $('.importar_nota_modal').modal('show');
-    });
+    document.addEventListener('DOMContentLoaded', function () {
+      var importButton = document.getElementById('importar_nota');
+      var importForm = document.getElementById('form_importar_nota');
+      var importModal = document.querySelector('.importar_nota_modal');
 
-    $('form[id=form_importar_nota]').on('submit', function(){
-        $('.page-loader-wrapper').show();
-        {% if entrada %}
-        $('.loader .loader-message').text('Importando nota fiscal do fornecedor, aguarde...');
-        {% elif saida %}
-        $('.loader .loader-message').text('Importando nota fiscal, aguarde...');
-        {% endif %}
+      if (importButton && importModal && window.bootstrap && window.bootstrap.Modal) {
+        importButton.addEventListener('click', function (event) {
+          event.preventDefault();
+          window.bootstrap.Modal.getOrCreateInstance(importModal).show();
+        });
+      }
+
+      if (importForm) {
+        importForm.addEventListener('submit', function () {
+          {% if entrada %}
+          AppCore.loader.show('Importando nota fiscal do fornecedor, aguarde...');
+          {% elif saida %}
+          AppCore.loader.show('Importando nota fiscal, aguarde...');
+          {% endif %}
+        });
+      }
     });
   </script>
   

@@ -120,11 +120,13 @@
           </div>
 
           <div class="col-sm-6">
-            <div class="form-group">
-              <div class="form-line">
-                <label>{{form.veiculo.label}}</label>
-                {% if form.veiculo.errors %}<label class="error">{% for error in form.veiculo.errors %}{{error}}{% endfor %}</label>{% endif %}
-                {{form.veiculo}}
+            <div id="veiculo-wrapper">
+              <div class="form-group">
+                <div class="form-line">
+                  <label>{{form.veiculo.label}}</label>
+                  {% if form.veiculo.errors %}<label class="error">{% for error in form.veiculo.errors %}{{error}}{% endfor %}</label>{% endif %}
+                  {{form.veiculo}}
+                </div>
               </div>
             </div>
           </div>
@@ -159,113 +161,7 @@
         </div>
       </div>
 
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Limite de crédito</label>
-              <span class="form-control display-cliente-field" id="limite_credito_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Indicador da IE</label>
-              <span class="form-control display-cliente-field" id="ind_ie_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>CPF/CNPJ</label>
-              <span class="form-control display-cliente-field" id="cpf_cnpj_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Inscrição estadual/RG</label>
-              <span class="form-control display-cliente-field" id="ie_rg_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-         <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Representante</label>
-              <span class="form-control display-cliente-field" id="representante_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Endereço</label>
-              <span class="form-control display-cliente-field" id="endereco_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Bairro</label>
-              <span class="form-control display-cliente-field" id="bairro_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Município</label>
-              <span type="text" class="form-control display-cliente-field" id="municipio_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>UF</label>
-              <span type="text" class="form-control display-cliente-field" id="uf_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>CEP</label>
-              <span type="text" class="form-control display-cliente-field" id="cep_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Email</label>
-              <span type="text" class="form-control display-cliente-field" id="email_cliente"></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-sm-6">
-          <div class="form-group">
-            <div class="form-line">
-              <label>Telefone</label>
-              <span type="text" class="form-control display-cliente-field" id="telefone_cliente"></span>
-            </div>
-          </div>
-        </div>
+        {% include 'progressive/venda_cliente_info.html' %}
         
       </div>
       <!-- #Tab CLIENTE -->

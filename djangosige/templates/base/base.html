@@ -17,15 +17,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" type="text/css">
 
     <!-- Vendor Css -->
-    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/bootstrap-compat.css' %}" rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}?v=20260401b" rel="stylesheet">
+    <link href="{% static 'css/bootstrap-compat.css' %}?v=20260401b" rel="stylesheet">
 
     <!-- App Css -->
-    <link href="{% static 'css/style.css' %}" rel="stylesheet">
-    <link href="{% static 'css/theme-overrides.css' %}" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}?v=20260401b" rel="stylesheet">
+    <link href="{% static 'css/theme-overrides.css' %}?v=20260401b" rel="stylesheet">
 
     <!-- Core Js -->
-    <script src="{% static 'js/jquery/jquery-3.0.0.min.js' %}"></script>
+    <script src="{% static 'js/jquery/jquery-3.0.0.min.js' %}?v=20260401b"></script>
+    <script src="{% static 'js/vendor/htmx.min.js' %}?v=20260401b"></script>
+    <script defer src="{% static 'js/vendor/alpine.min.js' %}?v=20260401b"></script>
 
 
     <title>DjangoSIGE | {%block title%}Bem-vindo{%endblock%}</title>
@@ -452,14 +454,17 @@
     {% include 'base/modal.html' %}
 
     <!-- Bootstrap Js -->
-    <script src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap/bootstrap-compat.js' %}"></script>
-
-    <!-- Datatables Js -->
-    <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
+    <script>
+        window.SIGE_ASSETS = window.SIGE_ASSETS || {};
+        window.SIGE_ASSETS.dataTables = "{% static 'js/jquery.dataTables.min.js' %}?v=20260401b";
+    </script>
+    <script src="{% static 'js/bootstrap/bootstrap.min.js' %}?v=20260401b"></script>
+    <script src="{% static 'js/bootstrap/bootstrap-compat.js' %}?v=20260401b"></script>
+    <script src="{% static 'js/app-core.js' %}?v=20260401b"></script>
 
     <!-- Sige Js -->
-    <script src="{% static 'js/admin.js' %}"></script>
+    <script src="{% static 'js/admin.js' %}?v=20260401b"></script>
+    <script src="{% static 'js/progressive-enhancement.js' %}?v=20260401b"></script>
 
 
     {% if messages %}
@@ -467,7 +472,7 @@
     {% if 'permission_warning' in message.tags %}
 
     <script type="text/javascript">
-        $.Admin.messages.msgAlerta("{{message}}");
+        AppCore.messages.alert("{{message}}");
     </script>
 
     {%endif%}

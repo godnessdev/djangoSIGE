@@ -1,5 +1,5 @@
 <!-- Modal selecionar data do pagamento -->
-<div class="modal fade modal_selecionar_data">
+<div class="modal fade modal_selecionar_data" x-data="{submitting: false}">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header">
@@ -33,7 +33,10 @@
 
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success" id="baixar_conta_confirma">CONFIRMA</button>
+        <button type="button" class="btn btn-success" id="baixar_conta_confirma" data-progressive="htmx" @click="submitting = true" @htmx:after-request.window="submitting = false" @htmx:response-error.window="submitting = false">
+          <span x-show="!submitting">CONFIRMA</span>
+          <span x-cloak x-show="submitting">ENVIANDO...</span>
+        </button>
       </div>
     </div>
   </div>
