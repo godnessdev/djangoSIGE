@@ -2,6 +2,7 @@
 
 import operator
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from django.dispatch import receiver
@@ -25,6 +26,10 @@ TIPOS_MOVIMENTO_SAIDA = (
     (u'0', u'Ajuste'),
     (u'1', u'Saída por pedido de venda'),
     (u'2', u'Saída por importação de nota fiscal'),
+)
+
+IMPACTO_CUSTO_CHOICES = (
+    (u'MAN', u'Manter custo atual do produto'),
 )
 
 
@@ -56,6 +61,9 @@ class ItensMovimento(models.Model):
 
 
 class MovimentoEstoque(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='movimentos_estoque',
+        on_delete=models.CASCADE, null=True, blank=True)
     data_movimento = models.DateField(null=True, blank=True)
     quantidade_itens = models.IntegerField(
         validators=[MinValueValidator(0)], default=0)
@@ -78,6 +86,26 @@ class MovimentoEstoque(models.Model):
 
     def format_valor_total(self):
         return locale.format(u'%.2f', self.valor_total, 1)
+
+    def clean(self):
+        errors = {}
+        if self.empresa and hasattr(self, 'local_dest') and getattr(self, 'local_dest', None):
+            if self.local_dest.empresa_id != self.empresa_id:
+                errors['local_dest'] = 'O local de destino precisa pertencer a empresa ativa.'
+        elif self.empresa and hasattr(self, 'local_orig') and getattr(self, 'local_orig', None):
+            if self.local_orig.empresa_id != self.empresa_id:
+                errors['local_orig'] = 'O local de origem precisa pertencer a empresa ativa.'
+        elif self.empresa and hasattr(self, 'local_estoque_orig'):
+            if self.local_estoque_orig and self.local_estoque_orig.empresa_id != self.empresa_id:
+                errors['local_estoque_orig'] = 'O local de origem precisa pertencer a empresa ativa.'
+            empresa_destino_id = self.empresa_id
+            if hasattr(self, 'empresa_destino') and getattr(self, 'empresa_destino_id', None):
+                empresa_destino_id = self.empresa_destino_id
+            if self.local_estoque_dest and self.local_estoque_dest.empresa_id != empresa_destino_id:
+                errors['local_estoque_dest'] = 'O local de destino precisa pertencer a empresa de destino informada.'
+
+        if errors:
+            raise ValidationError(errors)
 
 
 @receiver(
@@ -134,10 +162,31 @@ class SaidaEstoque(MovimentoEstoque):
 
 
 class TransferenciaEstoque(MovimentoEstoque):
+    empresa_destino = models.ForeignKey(
+        'cadastro.Empresa', related_name='transferencias_estoque_recebidas',
+        on_delete=models.CASCADE, null=True, blank=True)
     local_estoque_orig = models.ForeignKey(
         'estoque.LocalEstoque', related_name="transf_estoque_orig", on_delete=models.CASCADE)
     local_estoque_dest = models.ForeignKey(
         'estoque.LocalEstoque', related_name="transf_estoque_dest", on_delete=models.CASCADE)
+    impacto_custo = models.CharField(
+        max_length=3, choices=IMPACTO_CUSTO_CHOICES, default='MAN')
+
+    def clean(self):
+        super(TransferenciaEstoque, self).clean()
+
+        errors = {}
+        empresa_destino = self.empresa_destino or self.empresa
+        if not empresa_destino:
+            errors['empresa_destino'] = 'Informe a empresa de destino da transferencia.'
+        elif self.empresa and not self.empresa.pertence_ao_mesmo_grupo(empresa_destino):
+            errors['empresa_destino'] = 'A transferencia so pode ocorrer entre empresas do mesmo grupo.'
+
+        if self.local_estoque_orig_id and self.local_estoque_dest_id and self.local_estoque_orig_id == self.local_estoque_dest_id:
+            errors['local_estoque_dest'] = 'O local de destino precisa ser diferente do local de origem.'
+
+        if errors:
+            raise ValidationError(errors)
 
     def get_edit_url(self):
         return reverse_lazy('estoque:detalhartransferenciaestoqueview', kwargs={'pk': self.id})

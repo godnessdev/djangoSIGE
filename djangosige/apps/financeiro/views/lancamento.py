@@ -2,11 +2,17 @@
 
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 
 from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView
 
+from djangosige.apps.cadastro.utils import (
+    get_empresa_ativa,
+    filtrar_queryset_por_empresa_ativa,
+    get_empresas_grupo_permitidas,
+    pode_consultar_consolidado_grupo,
+)
 from djangosige.apps.financeiro.forms import ContaPagarForm, ContaReceberForm, SaidaForm, EntradaForm
 from djangosige.apps.financeiro.models import Lancamento, Saida, Entrada, MovimentoCaixa
 from djangosige.apps.vendas.models import PedidoVenda
@@ -17,7 +23,49 @@ from itertools import chain
 from datetime import datetime
 
 
+def get_empresa_filtro_financeiro(request):
+    empresa_ativa = get_empresa_ativa(request.user)
+    if empresa_ativa is None:
+        return None
+
+    empresa_id = request.GET.get('empresa')
+    if not empresa_id:
+        return None
+
+    empresas_grupo = get_empresas_grupo_permitidas(
+        request.user, empresa=empresa_ativa)
+    try:
+        return empresas_grupo.get(pk=empresa_id)
+    except Exception:
+        return None
+
+
+def filtrar_queryset_financeiro(queryset, user, modo='empresa', empresa_filtro=None, field_name='empresa'):
+    empresa_ativa = get_empresa_ativa(user)
+    if empresa_ativa is None:
+        return queryset.none()
+
+    if modo == 'grupo' and pode_consultar_consolidado_grupo(user, empresa_ativa):
+        empresas_grupo = get_empresas_grupo_permitidas(user, empresa=empresa_ativa)
+        if empresa_filtro and empresas_grupo.filter(pk=empresa_filtro.pk).exists():
+            empresas_grupo = empresas_grupo.filter(pk=empresa_filtro.pk)
+        return queryset.filter(**{'%s__in' % field_name: empresas_grupo}).distinct()
+
+    return queryset.filter(**{field_name: empresa_ativa})
+
+
 class MovimentoCaixaMixin(object):
+
+    def get_movimentos_queryset(self, empresa):
+        if empresa is None:
+            return MovimentoCaixa.objects.none()
+        return MovimentoCaixa.objects.filter(empresa=empresa)
+
+    def get_or_create_movimento_caixa(self, empresa, data_movimento):
+        if empresa is None or not data_movimento:
+            return None, False
+        return MovimentoCaixa.objects.get_or_create(
+            empresa=empresa, data_movimento=data_movimento)
 
     def adicionar_novo_movimento_caixa(self, lancamento, novo_movimento):
         if isinstance(lancamento, Entrada):
@@ -25,7 +73,8 @@ class MovimentoCaixaMixin(object):
             novo_movimento.saldo_final = novo_movimento.saldo_final + lancamento.valor_liquido
             novo_movimento.save()
             # Atualizar os saldos dos proximos movimentos
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=novo_movimento.data_movimento):
+            for m in self.get_movimentos_queryset(novo_movimento.empresa).filter(
+                    data_movimento__gt=novo_movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial + lancamento.valor_liquido
                 m.saldo_final = m.saldo_final + lancamento.valor_liquido
                 m.save()
@@ -35,7 +84,8 @@ class MovimentoCaixaMixin(object):
             novo_movimento.saldo_final = novo_movimento.saldo_final - lancamento.valor_liquido
             novo_movimento.save()
             # Atualizar os saldos dos proximos movimentos
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=novo_movimento.data_movimento):
+            for m in self.get_movimentos_queryset(novo_movimento.empresa).filter(
+                    data_movimento__gt=novo_movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial - lancamento.valor_liquido
                 m.saldo_final = m.saldo_final - lancamento.valor_liquido
                 m.save()
@@ -45,7 +95,8 @@ class MovimentoCaixaMixin(object):
             movimento.entradas = movimento.entradas - valor
             movimento.saldo_final = movimento.saldo_final - valor
             movimento.save()
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=movimento.data_movimento):
+            for m in self.get_movimentos_queryset(movimento.empresa).filter(
+                    data_movimento__gt=movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial - valor
                 m.saldo_final = m.saldo_final - valor
                 m.save()
@@ -53,7 +104,8 @@ class MovimentoCaixaMixin(object):
             movimento.saidas = movimento.saidas - valor
             movimento.saldo_final = movimento.saldo_final + valor
             movimento.save()
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=movimento.data_movimento):
+            for m in self.get_movimentos_queryset(movimento.empresa).filter(
+                    data_movimento__gt=movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial + valor
                 m.saldo_final = m.saldo_final + valor
                 m.save()
@@ -63,7 +115,8 @@ class MovimentoCaixaMixin(object):
             movimento.entradas = movimento.entradas + valor
             movimento.saldo_final = movimento.saldo_final + valor
             movimento.save()
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=movimento.data_movimento):
+            for m in self.get_movimentos_queryset(movimento.empresa).filter(
+                    data_movimento__gt=movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial + valor
                 m.saldo_final = m.saldo_final + valor
                 m.save()
@@ -71,7 +124,8 @@ class MovimentoCaixaMixin(object):
             movimento.saidas = movimento.saidas + valor
             movimento.saldo_final = movimento.saldo_final - valor
             movimento.save()
-            for m in MovimentoCaixa.objects.filter(data_movimento__gt=movimento.data_movimento):
+            for m in self.get_movimentos_queryset(movimento.empresa).filter(
+                    data_movimento__gt=movimento.data_movimento):
                 m.saldo_inicial = m.saldo_inicial - valor
                 m.saldo_final = m.saldo_final - valor
                 m.save()
@@ -83,7 +137,7 @@ class MovimentoCaixaMixin(object):
 
     def atualizar_saldos(self, movimento):
         try:
-            ultimo_mvmt = MovimentoCaixa.objects.filter(
+            ultimo_mvmt = self.get_movimentos_queryset(movimento.empresa).filter(
                 data_movimento__lt=movimento.data_movimento).latest('data_movimento')
             movimento.saldo_inicial = ultimo_mvmt.saldo_final
             movimento.saldo_final = movimento.saldo_inicial
@@ -121,17 +175,23 @@ class AdicionarLancamentoBaseView(CustomCreateView, MovimentoCaixaMixin):
         form = form_class(request.POST, user=request.user)
 
         if form.is_valid():
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form)
+
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
 
             if self.object.movimentar_caixa:
                 mvmt = None
                 created = None
                 if self.object.data_pagamento:
-                    mvmt, created = MovimentoCaixa.objects.get_or_create(
-                        data_movimento=self.object.data_pagamento)
+                    mvmt, created = self.get_or_create_movimento_caixa(
+                        empresa, self.object.data_pagamento)
                 elif self.object.data_vencimento:
-                    mvmt, created = MovimentoCaixa.objects.get_or_create(
-                        data_movimento=self.object.data_vencimento)
+                    mvmt, created = self.get_or_create_movimento_caixa(
+                        empresa, self.object.data_vencimento)
 
                 if mvmt:
                     if created:
@@ -234,7 +294,13 @@ class EditarLancamentoBaseView(CustomUpdateView, MovimentoCaixaMixin):
                           user=request.user)
 
         if form.is_valid():
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form)
+
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
             self.object.save()
 
             variacao_valor = self.object.valor_liquido - vliquido_previo
@@ -244,11 +310,11 @@ class EditarLancamentoBaseView(CustomUpdateView, MovimentoCaixaMixin):
                     mvmt = None
                     created = None
                     if self.object.data_pagamento:
-                        mvmt, created = MovimentoCaixa.objects.get_or_create(
-                            data_movimento=self.object.data_pagamento)
+                        mvmt, created = self.get_or_create_movimento_caixa(
+                            empresa, self.object.data_pagamento)
                     elif self.object.data_vencimento:
-                        mvmt, created = MovimentoCaixa.objects.get_or_create(
-                            data_movimento=self.object.data_vencimento)
+                        mvmt, created = self.get_or_create_movimento_caixa(
+                            empresa, self.object.data_vencimento)
 
                     # Inseriu uma data de pagamento ou vencimento
                     if mvmt:
@@ -298,11 +364,11 @@ class EditarLancamentoBaseView(CustomUpdateView, MovimentoCaixaMixin):
                     mvmt = None
                     created = None
                     if self.object.data_pagamento:
-                        mvmt, created = MovimentoCaixa.objects.get_or_create(
-                            data_movimento=self.object.data_pagamento)
+                        mvmt, created = self.get_or_create_movimento_caixa(
+                            empresa, self.object.data_pagamento)
                     elif self.object.data_vencimento:
-                        mvmt, created = MovimentoCaixa.objects.get_or_create(
-                            data_movimento=self.object.data_vencimento)
+                        mvmt, created = self.get_or_create_movimento_caixa(
+                            empresa, self.object.data_vencimento)
 
                     if mvmt:
                         if created:
@@ -331,6 +397,10 @@ class EditarContaPagarView(EditarLancamentoBaseView):
         context['return_url'] = reverse_lazy('financeiro:listacontapagarview')
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            self.model.objects.all(), self.request.user)
+
 
 class EditarContaReceberView(EditarLancamentoBaseView):
     form_class = ContaReceberForm
@@ -346,6 +416,10 @@ class EditarContaReceberView(EditarLancamentoBaseView):
             'financeiro:listacontareceberview')
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            self.model.objects.all(), self.request.user)
+
 
 class EditarEntradaView(EditarLancamentoBaseView):
     form_class = EntradaForm
@@ -360,6 +434,10 @@ class EditarEntradaView(EditarLancamentoBaseView):
             'financeiro:listarecebimentosview')
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            self.model.objects.all(), self.request.user)
+
 
 class EditarSaidaView(EditarLancamentoBaseView):
     form_class = SaidaForm
@@ -373,19 +451,51 @@ class EditarSaidaView(EditarLancamentoBaseView):
         context['return_url'] = reverse_lazy('financeiro:listapagamentosview')
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            self.model.objects.all(), self.request.user)
+
 
 class LancamentoListBaseView(CustomListView, MovimentoCaixaMixin):
     permission_codename = 'view_lancamento'
 
+    def get_modo_listagem(self):
+        if self.request.GET.get('modo') == 'grupo' and pode_consultar_consolidado_grupo(
+                self.request.user, get_empresa_ativa(self.request.user)):
+            return 'grupo'
+        return 'empresa'
+
+    def get_empresa_filtro(self):
+        return get_empresa_filtro_financeiro(self.request)
+
+    def filtrar_queryset(self, queryset):
+        return filtrar_queryset_financeiro(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
+
     def get_queryset(self, object, status):
-        return object.objects.filter(status__in=status)
+        queryset = object.objects.filter(status__in=status).select_related(
+            'empresa', 'grupo_plano')
+        return self.filtrar_queryset(queryset)
+
+    def get_context_data(self, **kwargs):
+        context = super(LancamentoListBaseView, self).get_context_data(**kwargs)
+        context['empresa_ativa'] = get_empresa_ativa(self.request.user)
+        context['pode_consolidar_grupo'] = pode_consultar_consolidado_grupo(
+            self.request.user, context['empresa_ativa'])
+        context['empresas_grupo'] = get_empresas_grupo_permitidas(
+            self.request.user, empresa=context['empresa_ativa'])
+        context['modo_financeiro'] = self.get_modo_listagem()
+        context['empresa_filtro_atual'] = self.get_empresa_filtro()
+        return context
 
     # Remover items selecionados da database
     def post(self, request, *args, **kwargs):
         if self.check_user_delete_permission(request, Lancamento):
+            queryset = filtrar_queryset_por_empresa_ativa(
+                self.model.objects.all(), request.user)
             for key, value in request.POST.items():
                 if value == "on":
-                    instance = self.model.objects.get(id=key)
+                    instance = get_object_or_404(queryset, id=key)
                     if(instance.movimento_caixa):
                         self.remover_valor_movimento_caixa(
                             instance, instance.movimento_caixa, instance.valor_liquido)
@@ -403,12 +513,13 @@ class LancamentoListView(LancamentoListBaseView):
     def get_context_data(self, **kwargs):
         context = super(LancamentoListView, self).get_context_data(**kwargs)
         context['title_complete'] = 'TODOS OS LANÇAMENTOS'
-        context['all_lancamentos_saidas'] = Saida.objects.all()
+        context['all_lancamentos_saidas'] = self.filtrar_queryset(
+            Saida.objects.all())
         return context
 
     def get_queryset(self):
-        all_entradas = Entrada.objects.all()
-        all_saidas = Saida.objects.all()
+        all_entradas = self.filtrar_queryset(Entrada.objects.all())
+        all_saidas = self.filtrar_queryset(Saida.objects.all())
         all_lancamentos = list(chain(all_saidas, all_entradas))
         return all_lancamentos
 
@@ -416,10 +527,14 @@ class LancamentoListView(LancamentoListBaseView):
         if self.check_user_delete_permission(request, Lancamento):
             for key, value in request.POST.items():
                 if value == "on":
-                    if Entrada.objects.filter(id=key).exists():
-                        instance = Entrada.objects.get(id=key)
-                    elif Saida.objects.filter(id=key).exists():
-                        instance = Saida.objects.get(id=key)
+                    if filtrar_queryset_por_empresa_ativa(
+                            Entrada.objects.filter(id=key), request.user).exists():
+                        instance = filtrar_queryset_por_empresa_ativa(
+                            Entrada.objects.all(), request.user).get(id=key)
+                    elif filtrar_queryset_por_empresa_ativa(
+                            Saida.objects.filter(id=key), request.user).exists():
+                        instance = filtrar_queryset_por_empresa_ativa(
+                            Saida.objects.all(), request.user).get(id=key)
                     else:
                         raise ValueError(
                             'Entrada/Saida para o lancamento escolhido nao existe.')
@@ -462,7 +577,9 @@ class ContaPagarAtrasadasListView(LancamentoListBaseView):
         return context
 
     def get_queryset(self):
-        return Saida.objects.filter(data_vencimento__lt=datetime.now().date(), status__in=['1', '2'])
+        queryset = Saida.objects.filter(
+            data_vencimento__lt=datetime.now().date(), status__in=['1', '2'])
+        return self.filtrar_queryset(queryset)
 
 
 class ContaPagarHojeListView(ContaPagarAtrasadasListView):
@@ -477,7 +594,9 @@ class ContaPagarHojeListView(ContaPagarAtrasadasListView):
         return context
 
     def get_queryset(self):
-        return Saida.objects.filter(data_vencimento=datetime.now().date(), status__in=['1', '2'])
+        queryset = Saida.objects.filter(
+            data_vencimento=datetime.now().date(), status__in=['1', '2'])
+        return self.filtrar_queryset(queryset)
 
 
 class ContaReceberListView(LancamentoListBaseView):
@@ -510,7 +629,9 @@ class ContaReceberAtrasadasListView(LancamentoListBaseView):
         return context
 
     def get_queryset(self):
-        return Entrada.objects.filter(data_vencimento__lt=datetime.now().date(), status__in=['1', '2'])
+        queryset = Entrada.objects.filter(
+            data_vencimento__lt=datetime.now().date(), status__in=['1', '2'])
+        return self.filtrar_queryset(queryset)
 
 
 class ContaReceberHojeListView(ContaReceberAtrasadasListView):
@@ -525,7 +646,9 @@ class ContaReceberHojeListView(ContaReceberAtrasadasListView):
         return context
 
     def get_queryset(self):
-        return Entrada.objects.filter(data_vencimento=datetime.now().date(), status__in=['1', '2'])
+        queryset = Entrada.objects.filter(
+            data_vencimento=datetime.now().date(), status__in=['1', '2'])
+        return self.filtrar_queryset(queryset)
 
 
 class EntradaListView(LancamentoListBaseView):
@@ -569,7 +692,10 @@ class GerarLancamentoView(CustomView, MovimentoCaixaMixin):
 
         # Tipo conta: 0 = Receber, 1 = Pagar
         if request.POST['tipoConta'] == '0':
-            obj = Entrada.objects.get(id=conta_id)
+            obj = get_object_or_404(
+                filtrar_queryset_por_empresa_ativa(
+                    Entrada.objects.all(), request.user),
+                id=conta_id)
             data['url'] = reverse_lazy(
                 'financeiro:editarrecebimentoview', kwargs={'pk': obj.id})
             obj.status = '0'
@@ -579,7 +705,10 @@ class GerarLancamentoView(CustomView, MovimentoCaixaMixin):
             if obj.movimentar_caixa:
                 self.atualizar_movimento_caixa(obj)
         elif request.POST['tipoConta'] == '1':
-            obj = Saida.objects.get(id=conta_id)
+            obj = get_object_or_404(
+                filtrar_queryset_por_empresa_ativa(
+                    Saida.objects.all(), request.user),
+                id=conta_id)
             data['url'] = reverse_lazy(
                 'financeiro:editarpagamentoview', kwargs={'pk': obj.id})
             obj.status = '0'
@@ -600,8 +729,8 @@ class GerarLancamentoView(CustomView, MovimentoCaixaMixin):
         mvmt = None
         created = None
         if object.data_pagamento:
-            mvmt, created = MovimentoCaixa.objects.get_or_create(
-                data_movimento=object.data_pagamento)
+            mvmt, created = self.get_or_create_movimento_caixa(
+                object.empresa, object.data_pagamento)
 
         if mvmt:
             # Caso a data esteja trocada
@@ -677,6 +806,7 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
             saida_estoque.valor_total = pedido.get_total_produtos_estoque()
             saida_estoque.pedido_venda = pedido
             saida_estoque.local_orig = pedido.local_orig
+            saida_estoque.empresa = pedido.empresa
 
             saida_estoque.save()
 
@@ -692,7 +822,10 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
 
     def get(self, request, *args, **kwargs):
         pedido_id = kwargs.get('pk', None)
-        pedido = PedidoVenda.objects.get(id=pedido_id)
+        pedido = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoVenda.objects.all(), request.user),
+            id=pedido_id)
         pagamentos = pedido.parcela_pagamento.all()
         n_parcelas = pagamentos.count()
 
@@ -709,12 +842,13 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
                 str(pagamento.indice_parcela), str(n_parcelas), str(pedido.id))
             entrada.valor_total = pagamento.valor_parcela
             entrada.valor_liquido = pagamento.valor_parcela
+            entrada.empresa = pedido.empresa
             entrada.save()
             mvmt = None
             created = None
             if pagamento.vencimento:
-                mvmt, created = MovimentoCaixa.objects.get_or_create(
-                    data_movimento=pagamento.vencimento)
+                mvmt, created = self.get_or_create_movimento_caixa(
+                    pedido.empresa, pagamento.vencimento)
 
             if mvmt:
                 if created:
@@ -743,7 +877,10 @@ class FaturarPedidoCompraView(CustomView, MovimentoCaixaMixin):
 
     def get(self, request, *args, **kwargs):
         pedido_id = kwargs.get('pk', None)
-        pedido = PedidoCompra.objects.get(id=pedido_id)
+        pedido = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoCompra.objects.all(), request.user),
+            id=pedido_id)
         pagamentos = pedido.parcela_pagamento.all()
         n_parcelas = pagamentos.count()
 
@@ -756,12 +893,13 @@ class FaturarPedidoCompraView(CustomView, MovimentoCaixaMixin):
                 str(pagamento.indice_parcela), str(n_parcelas), str(pedido.id))
             saida.valor_total = pagamento.valor_parcela
             saida.valor_liquido = pagamento.valor_parcela
+            saida.empresa = pedido.empresa
             saida.save()
             mvmt = None
             created = None
             if pagamento.vencimento:
-                mvmt, created = MovimentoCaixa.objects.get_or_create(
-                    data_movimento=pagamento.vencimento)
+                mvmt, created = self.get_or_create_movimento_caixa(
+                    pedido.empresa, pagamento.vencimento)
 
             if mvmt:
                 if created:

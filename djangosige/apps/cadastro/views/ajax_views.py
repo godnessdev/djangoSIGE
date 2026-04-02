@@ -13,6 +13,7 @@ from django.core import serializers
 from django.shortcuts import render
 from django.urls import reverse
 
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa, get_empresa_ativa
 from djangosige.apps.cadastro.models import Pessoa, Cliente, Fornecedor, Transportadora, Produto
 from djangosige.apps.fiscal.models import ICMS, ICMSSN, IPI, ICMSUFDest
 
@@ -173,8 +174,11 @@ class InfoCliente(View):
             return _empty_json_response()
 
         obj_list = []
-        pessoa = Pessoa.objects.get(pk=pessoa_id)
-        cliente = Cliente.objects.get(pk=pessoa_id)
+        cliente = filtrar_queryset_por_empresa_ativa(
+            Cliente.objects.all(), request.user, field_name='empresa_relacionada').filter(pk=pessoa_id).first()
+        if cliente is None:
+            return _empty_json_response()
+        pessoa = Pessoa.objects.get(pk=cliente.pk)
         obj_list.append(cliente)
 
         if pessoa.endereco_padrao:
@@ -210,8 +214,11 @@ class InfoFornecedor(View):
             return _empty_json_response()
 
         obj_list = []
-        pessoa = Pessoa.objects.get(pk=pessoa_id)
-        fornecedor = Fornecedor.objects.get(pk=pessoa_id)
+        fornecedor = filtrar_queryset_por_empresa_ativa(
+            Fornecedor.objects.all(), request.user, field_name='empresa_relacionada').filter(pk=pessoa_id).first()
+        if fornecedor is None:
+            return _empty_json_response()
+        pessoa = Pessoa.objects.get(pk=fornecedor.pk)
         obj_list.append(fornecedor)
 
         if pessoa.endereco_padrao:
@@ -270,8 +277,11 @@ class InfoTransportadora(View):
         veiculo_id = request.POST.get('veiculoId')
         veiculos = []
         if transportadora_id:
-            veiculos = Transportadora.objects.get(
-                pk=transportadora_id).veiculo.all()
+            transportadora = filtrar_queryset_por_empresa_ativa(
+                Transportadora.objects.all(), request.user, field_name='empresa_relacionada').filter(
+                pk=transportadora_id).first()
+            if transportadora:
+                veiculos = transportadora.veiculo.all()
         data = serializers.serialize(
             'json', veiculos, fields=('id', 'descricao',))
 
@@ -326,6 +336,7 @@ class ConsultaPrecoProduto(View):
         term = (request.GET.get('term') or '').strip()
         if len(term) < 2:
             return JsonResponse({'success': True, 'results': []})
+        empresa = get_empresa_ativa(request.user)
 
         queryset = Produto.objects.filter(descricao__istartswith=term).order_by('descricao')[:8]
         if not queryset.exists():
@@ -337,8 +348,8 @@ class ConsultaPrecoProduto(View):
                 'id': produto.pk,
                 'codigo': produto.codigo or '',
                 'descricao': produto.descricao or '',
-                'estoque': _format_decimal(produto.estoque_atual),
-                'preco': _format_currency(produto.venda),
+                'estoque': _format_decimal(produto.get_estoque_atual_empresa(empresa)),
+                'preco': _format_currency(produto.get_venda_empresa(empresa)),
                 'unidade': produto.get_sigla_unidade() or '',
                 'edit_url': reverse('cadastro:editarprodutoview', kwargs={'pk': produto.pk}),
             })
@@ -352,23 +363,27 @@ class InfoProduto(View):
         produto_id = (request.POST.get('produtoId') or '').strip()
         if not produto_id:
             return _empty_json_response()
+        empresa = get_empresa_ativa(request.user)
 
         obj_list = []
         pro = Produto.objects.get(pk=produto_id)
+        pro.venda = pro.get_venda_empresa(empresa)
+        pro.estoque_atual = pro.get_estoque_atual_empresa(empresa)
         obj_list.append(pro)
 
-        if pro.grupo_fiscal:
-            if pro.grupo_fiscal.regime_trib == '0':
+        grupo_fiscal = pro.get_grupo_fiscal_empresa(empresa)
+        if grupo_fiscal:
+            if grupo_fiscal.regime_trib == '0':
                 icms, created = ICMS.objects.get_or_create(
-                    grupo_fiscal=pro.grupo_fiscal)
+                    grupo_fiscal=grupo_fiscal)
             else:
                 icms, created = ICMSSN.objects.get_or_create(
-                    grupo_fiscal=pro.grupo_fiscal)
+                    grupo_fiscal=grupo_fiscal)
 
             ipi, created = IPI.objects.get_or_create(
-                grupo_fiscal=pro.grupo_fiscal)
+                grupo_fiscal=grupo_fiscal)
             icms_dest, created = ICMSUFDest.objects.get_or_create(
-                grupo_fiscal=pro.grupo_fiscal)
+                grupo_fiscal=grupo_fiscal)
             obj_list.append(icms)
             obj_list.append(ipi)
             obj_list.append(icms_dest)

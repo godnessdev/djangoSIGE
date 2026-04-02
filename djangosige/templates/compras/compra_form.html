@@ -272,6 +272,17 @@
 
         <div class="col-sm-6">
           <div class="form-group">
+            <div class="form-line">
+              <label>{{form.empresa_destino.label}}</label>
+              {% if form.empresa_destino.errors %}<label class="error">{% for error in form.empresa_destino.errors %}{{error}}{% endfor %}</label>{% endif %}
+              {{form.empresa_destino}}
+            </div>
+            <small>Use a matriz ativa para registrar compra centralizada abastecendo uma filial do mesmo grupo.</small>
+          </div>
+        </div>
+
+        <div class="col-sm-6">
+          <div class="form-group">
             <label>{{form.local_dest.label}}</label>
             {% if form.local_dest.errors %}<label class="error">{% for error in form.local_dest.errors %}{{error}}{% endfor %}</label>{% endif %}
             <div class="input-group" style="margin-bottom: 0px;">
@@ -283,7 +294,7 @@
           </div>
         </div>
 
-        <div class="col-sm-6">
+        <div class="col-sm-12">
           <div class="form-group">
             <div class="form-line">
               {{form.movimentar_estoque}}

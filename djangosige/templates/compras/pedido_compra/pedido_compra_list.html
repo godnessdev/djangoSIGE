@@ -11,28 +11,60 @@
 
     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 lista-content">
       <div class="card">
-        <form action="" method="post">
-          {% csrf_token %}
-          <div class="header">
-            <h2>
-              {{title_complete}}
-            </h2>
-              <div class="header-btn">
-                <a href="{{add_url}}" class="btn btn-success"><i class="material-icons">&#xE148;</i><span> ADICIONAR</span></a>
-                <button class="btn btn-red btn-remove"><i class="material-icons">&#xE872;</i></button>
-              </div>
-          </div>
+        <div class="header">
+          <h2>
+            {{title_complete}}
+          </h2>
+            <div class="header-btn">
+              <a href="{{add_url}}" class="btn btn-success"><i class="material-icons">&#xE148;</i><span> ADICIONAR</span></a>
+            </div>
+        </div>
 
-          <div class="body">
+        <div class="body">
 
-           {% include 'base/search.html' %}
+          {% include 'base/search.html' %}
 
-           <div class="table-responsive">
+          <form action="" method="get" class="row" style="margin-bottom: 15px;">
+            <div class="col-sm-4">
+              <label>Escopo</label>
+              <select name="modo" class="form-control">
+                <option value="empresa" {% if modo_compra != 'grupo' %}selected{% endif %}>Empresa ativa</option>
+                {% if pode_consolidar_grupo %}
+                <option value="grupo" {% if modo_compra == 'grupo' %}selected{% endif %}>Grupo empresarial</option>
+                {% endif %}
+              </select>
+            </div>
+            {% if pode_consolidar_grupo %}
+            <div class="col-sm-4">
+              <label>Empresa do grupo</label>
+              <select name="empresa" class="form-control">
+                <option value="">Todas do grupo</option>
+                {% for empresa in empresas_grupo %}
+                <option value="{{empresa.id}}" {% if empresa_filtro_atual and empresa_filtro_atual.id == empresa.id %}selected{% endif %}>{{empresa.nome_razao_social}}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div class="col-sm-4">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary form-control">Aplicar filtros</button>
+            </div>
+          </form>
+
+          <form action="" method="post">
+            {% csrf_token %}
+            <div class="header-btn" style="margin-bottom: 15px; text-align: right;">
+              <button class="btn btn-red btn-remove"><i class="material-icons">&#xE872;</i></button>
+            </div>
+
+            <div class="table-responsive">
             <table id="lista-database" class="table table-bordered table-striped lista-table">
               <thead>
                 <tr>
                   <th>#ID</th>                   
                   <th>Status</th>
+                  <th>Empresa operadora</th>
+                  <th>Empresa abastecida</th>
                   <th>Fornecedor</th>
                   <th>Data de entrega</th>
                   <th>Total</th>
@@ -43,9 +75,11 @@
               <tbody>
                {% if all_pedidos%}
                {% for pedido in all_pedidos %}
-               <tr class="clickable-row" data-href="{% url 'compras:editarpedidocompraview' pedido.id %}">
+               <tr{% if empresa_ativa and pedido.empresa_id == empresa_ativa.id %} class="clickable-row" data-href="{% url 'compras:editarpedidocompraview' pedido.id %}"{% endif %}>
                 <td>{{pedido.id}}</td>
                 <td><b>{{pedido.get_status_display}}</b></td>
+                <td>{{pedido.empresa|default_if_none:""}}</td>
+                <td>{{pedido.empresa_destino|default_if_none:pedido.empresa}}</td>
                 <td>{{pedido.fornecedor|default_if_none:""}}</td>
                 <td>{{pedido.format_data_entrega|default_if_none:""}}</td>
                 <td>{{pedido.format_valor_total}}</td>
@@ -60,10 +94,9 @@
             </tbody>
           </table>
         </div>
+          </form>
 
       </div>
-
-    </form>
 
   </div>
 </div>

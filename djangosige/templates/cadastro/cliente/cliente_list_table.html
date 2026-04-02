@@ -1,5 +1,5 @@
 <div class="table-responsive">
-  <table id="lista-database" class="table table-bordered table-striped lista-table">
+  <table id="lista-database" class="table table-bordered table-striped lista-table"{% if server_paginated_list %} data-server-pagination="true"{% endif %}>
     <thead>
       <tr>
         <th>#ID</th>                   
@@ -18,8 +18,8 @@
         <td>{{cliente.id}}</td>
         <td>{{cliente.nome_razao_social}}</td>
         <td>{% if cliente.tipo_pessoa == "PJ" %}{{cliente.pessoa_jur_info.cnpj|default_if_none:""}}{% else %}{{cliente.pessoa_fis_info.cpf|default_if_none:""}}{% endif %}</td>
-        <td>{% if cliente.endereco.all.0.uf %}{{cliente.endereco.all.0.get_uf_display}}{% endif %}</td>
-        <td>{{cliente.endereco.all.0.municipio|default_if_none:""}}</td>
+        <td>{% if cliente.endereco_padrao and cliente.endereco_padrao.uf %}{{cliente.endereco_padrao.get_uf_display}}{% endif %}</td>
+        <td>{% if cliente.endereco_padrao %}{{cliente.endereco_padrao.municipio|default_if_none:""}}{% endif %}</td>
         <td class="lista-remove">
           <input type="checkbox" name="{{cliente.id}}" id="remover-entrada-{{cliente.id}}"/>
           <label class="remove-entry-label" for="remover-entrada-{{cliente.id}}"></label>

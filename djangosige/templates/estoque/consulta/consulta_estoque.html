@@ -46,12 +46,40 @@
                 <div class="col-sm-5">
                   <div class="form-group">
                     <div class="form-line">
+                      <label>Empresa</label>
+                      <select class="form-control" id="empresa_id" name="empresa">
+                        {% for empresa in empresas_grupo %}
+                          <option value="{{ empresa.id }}" {% if empresa_filtro_atual and empresa.id == empresa_filtro_atual.id %}selected{% endif %}>{{ empresa }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-5">
+                  <div class="form-group">
+                    <div class="form-line">
                       <label>Local de estoque</label>
                       <select class="form-control" id="local_id" name="local">
                         <option value="">Todos</option>
                       {% for local in todos_locais %}
                           <option value="{{ local.id }}" {% if local.id|stringformat:"s" == request.GET.local %}selected{% endif %}>{{ local }}</option>
                       {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-5">
+                  <div class="form-group">
+                    <div class="form-line">
+                      <label>Modo</label>
+                      <select class="form-control" name="modo">
+                        <option value="empresa" {% if modo_estoque == 'empresa' %}selected{% endif %}>Saldo por filial</option>
+                        {% if pode_consolidar_grupo %}
+                        <option value="grupo" {% if modo_estoque == 'grupo' %}selected{% endif %}>Saldo consolidado do grupo</option>
+                        {% endif %}
+                        <option value="falta" {% if modo_estoque == 'falta' %}selected{% endif %}>Produtos em falta</option>
                       </select>
                     </div>
                   </div>
@@ -84,17 +112,31 @@
                     <td>{{produto.codigo}}</td>
                     <td>{{produto}}</td>
                     <td>{% if produto.categoria %}{{produto.categoria}}{% endif %}</td>
-                    <td>{{produto.estoque_atual}}</td>
+                    <td>{{produto.estoque_exibicao}}</td>
                     <td>{{produto.estoque_minimo}}</td>
-                    <td>{{produto.venda}}</td>
+                    <td>{% if produto.valor_unitario_exibicao != '' %}{{produto.valor_unitario_exibicao}}{% else %}---{% endif %}</td>
                   </tr>
+                    {% if modo_estoque == 'grupo' and produto.saldos_por_empresa_exibicao %}
                     <tr colspan="6" class="plano-subgrupo-row accordion-{{produto.id}} in">
-                      <th colspan="3" style="font-weight: bolder; border-bottom-color: darkblue;">Local</th>
+                      <th colspan="3" style="font-weight: bolder; border-bottom-color: darkblue;">Empresa</th>
+                      <th colspan="3" style="font-weight: bolder; border-bottom-color: darkblue;">Saldo</th>
+                    </tr>
+                    {% for saldo_empresa in produto.saldos_por_empresa_exibicao %}
+                    <tr class="plano-subgrupo-row accordion-{{produto.id}} in">
+                      <td colspan="3">{{saldo_empresa.empresa}}</td>
+                      <td colspan="3">{{saldo_empresa.quantidade}}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                    <tr colspan="6" class="plano-subgrupo-row accordion-{{produto.id}} in">
+                      <th colspan="2" style="font-weight: bolder; border-bottom-color: darkblue;">Empresa</th>
+                      <th colspan="2" style="font-weight: bolder; border-bottom-color: darkblue;">Local</th>
                       <th colspan="3" style="font-weight: bolder; border-bottom-color: darkblue;">Quantidade</th>
                     </tr>
-                    {% for pe in produto.produto_estocado.all %}
+                    {% for pe in produto.locais_exibicao %}
                     <tr class="plano-subgrupo-row accordion-{{produto.id}} in">
-                      <td colspan="3">{{pe.local}}</td>
+                      <td colspan="2">{{pe.local.empresa}}</td>
+                      <td colspan="2">{{pe.local}}</td>
                       <td colspan="3">{{pe.quantidade}}</td>
                     </tr>
                     {% endfor %}

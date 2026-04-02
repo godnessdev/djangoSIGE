@@ -5,6 +5,9 @@ from .base import Pessoa, UF_SIGLA
 
 
 class Transportadora(Pessoa):
+    empresa_relacionada = models.ForeignKey(
+        'cadastro.Empresa', related_name='transportadoras',
+        on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         verbose_name = "Transportadora"

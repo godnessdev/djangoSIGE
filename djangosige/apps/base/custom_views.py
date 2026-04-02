@@ -50,6 +50,14 @@ class CustomListView(CheckPermissionMixin, ListView):
     def get_queryset(self):
         return self.model.objects.all()
 
+    def get_context_data(self, **kwargs):
+        context = super(CustomListView, self).get_context_data(**kwargs)
+        query_data = self.request.GET.copy()
+        query_data.pop('page', None)
+        context['pagination_query'] = query_data.urlencode()
+        context['server_paginated_list'] = bool(self.get_paginate_by(self.get_queryset()))
+        return context
+
     # Remover items selecionados da database
     def post(self, request, *args, **kwargs):
         if self.check_user_delete_permission(request, self.model):

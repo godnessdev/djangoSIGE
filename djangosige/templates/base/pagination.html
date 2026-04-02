@@ -1,0 +1,28 @@
+{% if is_paginated %}
+<nav class="list-pagination" aria-label="Paginacao da lista">
+  <div class="list-pagination__summary">
+    Pagina {{ page_obj.number }} de {{ paginator.num_pages }}. {{ paginator.count }} registros no total.
+  </div>
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+    <li>
+      <a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page=1">Primeira</a>
+    </li>
+    <li>
+      <a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+    </li>
+    {% endif %}
+    <li class="active">
+      <span>{{ page_obj.number }}</span>
+    </li>
+    {% if page_obj.has_next %}
+    <li>
+      <a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Proxima</a>
+    </li>
+    <li>
+      <a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ paginator.num_pages }}">Ultima</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}

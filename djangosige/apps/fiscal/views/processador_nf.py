@@ -4,7 +4,7 @@ from djangosige.apps.fiscal.models import NotaFiscalSaida, NotaFiscalEntrada, Co
     ErrosValidacaoNotaFiscal, RespostaSefazNotaFiscal, NaturezaOperacao, GrupoFiscal, \
     ICMS, ICMSUFDest, ICMSSN, IPI, PIS, COFINS
 from djangosige.configs.settings import MEDIA_ROOT
-from djangosige.apps.cadastro.models import COD_UF, PessoaJuridica, PessoaFisica, Fornecedor, Cliente, Empresa, Transportadora, Endereco, Telefone, Produto, Unidade
+from djangosige.apps.cadastro.models import COD_UF, PessoaJuridica, PessoaFisica, Fornecedor, Cliente, Empresa, Transportadora, Endereco, Telefone, Produto, ProdutoEmpresa, Unidade
 from djangosige.apps.compras.models import PedidoCompra, ItensCompra
 from djangosige.apps.vendas.models import PedidoVenda, ItensVenda
 
@@ -33,6 +33,46 @@ class ProcessadorNotaFiscal(object):
         self.erro = erro
         self.message = message
         return erro
+
+    def salvar_configuracao_produto_empresa(self, produto, empresa, venda=None, custo=None, cfop_padrao=None, grupo_fiscal=None):
+        if not produto or not produto.pk or not empresa:
+            return
+
+        defaults = {}
+        if venda is not None:
+            defaults['venda'] = venda
+        if custo is not None:
+            defaults['custo'] = custo
+        if cfop_padrao is not None:
+            defaults['cfop_padrao'] = cfop_padrao
+        if grupo_fiscal is not None:
+            defaults['grupo_fiscal'] = grupo_fiscal
+
+        if defaults:
+            ProdutoEmpresa.objects.update_or_create(
+                produto=produto,
+                empresa=empresa,
+                defaults=defaults
+            )
+
+    def get_or_create_natureza_operacao_empresa(self, empresa, cfop):
+        queryset = NaturezaOperacao.objects.filter(cfop=str(cfop))
+        if empresa:
+            queryset = queryset.filter(empresa=empresa)
+        else:
+            queryset = queryset.filter(empresa__isnull=True)
+
+        nat_op = queryset.first()
+        if nat_op:
+            return nat_op
+
+        nat_op = NaturezaOperacao(
+            empresa=empresa,
+            cfop=str(cfop),
+        )
+        nat_op.set_values_by_cfop()
+        nat_op.save()
+        return nat_op
 
     def montar_nota(self, nota_obj, versao='3.10'):
         if versao == '3.10':
@@ -130,6 +170,7 @@ class ProcessadorNotaFiscal(object):
         # Detalhamento dos produtos e servicos
         if nota_obj.venda:
             for index, item in enumerate(nota_obj.venda.itens_venda.all(), 1):
+                grupo_fiscal = item.get_grupo_fiscal()
                 det = Det_310()
                 det.nItem.valor = index
                 det.infAdProd.valor = item.inf_ad_prod
@@ -144,7 +185,7 @@ class ProcessadorNotaFiscal(object):
                     if len(item.produto.ncm) > 8:
                         det.prod.EXTIPI.valor = item.produto.ncm[8:]
 
-                det.prod.CFOP.valor = item.produto.get_cfop_padrao()
+                det.prod.CFOP.valor = item.get_cfop_padrao()
                 det.prod.uCom.valor = item.produto.get_sigla_unidade()
                 det.prod.qCom.valor = item.quantidade
                 det.prod.vUnCom.valor = item.valor_unit
@@ -158,13 +199,13 @@ class ProcessadorNotaFiscal(object):
                 det.prod.vOutro.valor = item.valor_rateio_despesas
 
                 # Impostos
-                if item.produto.grupo_fiscal:
+                if grupo_fiscal:
                     # Simples Nacional
-                    if item.produto.grupo_fiscal.regime_trib == '1':
+                    if grupo_fiscal.regime_trib == '1':
                         det.imposto.ICMS.regime_tributario = 1
                         # ICMS
-                        if item.produto.grupo_fiscal.icms_sn_padrao:
-                            icms_sn_obj = item.produto.grupo_fiscal.icms_sn_padrao.get()
+                        if grupo_fiscal.icms_sn_padrao:
+                            icms_sn_obj = grupo_fiscal.icms_sn_padrao.get()
 
                             det.imposto.ICMS.orig.valor = item.produto.origem
                             det.imposto.ICMS.CSOSN.valor = icms_sn_obj.csosn
@@ -185,11 +226,11 @@ class ProcessadorNotaFiscal(object):
                             det.imposto.ICMS.CSOSN.valor = '400'
 
                     # Regime normal
-                    elif item.produto.grupo_fiscal.regime_trib == '0':
+                    elif grupo_fiscal.regime_trib == '0':
                         det.imposto.ICMS.regime_tributario = False
                         # ICMS
-                        if item.produto.grupo_fiscal.icms_padrao:
-                            icms_obj = item.produto.grupo_fiscal.icms_padrao.get()
+                        if grupo_fiscal.icms_padrao:
+                            icms_obj = grupo_fiscal.icms_padrao.get()
 
                             det.imposto.ICMS.orig.valor = item.produto.origem
                             det.imposto.ICMS.CST.valor = icms_obj.cst.replace(
@@ -218,7 +259,7 @@ class ProcessadorNotaFiscal(object):
 
                     # ICMSUFDest (vendas interestaduais para consumidor final
                     # nao contribuinte)
-                    icms_dest = item.produto.grupo_fiscal.icms_dest_padrao.get()
+                    icms_dest = grupo_fiscal.icms_dest_padrao.get()
                     if icms_dest.p_fcp_dest or icms_dest.p_icms_dest or icms_dest.p_icms_inter or icms_dest.p_icms_inter_part:
                         det.imposto.ICMSUFDest.vBCUFDest.valor = item.vbc_uf_dest
                         det.imposto.ICMSUFDest.pFCPUFDest.valor = icms_dest.p_fcp_dest
@@ -230,7 +271,7 @@ class ProcessadorNotaFiscal(object):
                         det.imposto.ICMSUFDest.vICMSUFRemet.valor = item.vicmsufremet
 
                     # IPI
-                    ipi_obj = item.produto.grupo_fiscal.ipi_padrao.get()
+                    ipi_obj = grupo_fiscal.ipi_padrao.get()
                     if ipi_obj.cst:
                         det.imposto.IPI.CST.valor = ipi_obj.cst
                         det.imposto.IPI.clEnq.valor = ipi_obj.cl_enq
@@ -249,7 +290,7 @@ class ProcessadorNotaFiscal(object):
                         det.imposto.IPI.CST.valor = '99'
 
                     # PIS
-                    pis_obj = item.produto.grupo_fiscal.pis_padrao.get()
+                    pis_obj = grupo_fiscal.pis_padrao.get()
                     if pis_obj.cst:
                         det.imposto.PIS.CST.valor = pis_obj.cst
 
@@ -266,7 +307,7 @@ class ProcessadorNotaFiscal(object):
                         det.imposto.PIS.CST.valor = '99'
 
                     # COFINS
-                    cofins_obj = item.produto.grupo_fiscal.cofins_padrao.get()
+                    cofins_obj = grupo_fiscal.cofins_padrao.get()
                     if cofins_obj.cst:
                         det.imposto.COFINS.CST.valor = cofins_obj.cst
 
@@ -581,6 +622,7 @@ class ProcessadorNotaFiscal(object):
         venda.seguro = nfe.infNFe.total.ICMSTot.vSeg.valor
         venda.impostos = 0
         venda.status = u'3'  # Importado
+        venda.empresa = nota_saida.emit_saida
         venda.save()
 
         # ItensVenda/Produto/NaturezaOperacao/Unidade
@@ -588,6 +630,8 @@ class ProcessadorNotaFiscal(object):
             itens_venda = ItensVenda()
             itens_venda.venda_id = venda
             produtos = Produto.objects.filter(descricao=det.prod.xProd.valor)
+            nat_op = None
+            grupo_fiscal = None
 
             # Produto
             if len(produtos):
@@ -611,15 +655,10 @@ class ProcessadorNotaFiscal(object):
                 produto.inf_adicionais = det.infAdProd.valor
 
                 # Natureza Operacao
-                nat_ops = NaturezaOperacao.objects.filter(
-                    cfop=str(det.prod.CFOP.valor))
-                if len(nat_ops):
-                    nat_op = nat_ops[0]
-                else:
-                    nat_op = NaturezaOperacao()
-                    nat_op.cfop = str(det.prod.CFOP.valor)
-                    nat_op.set_values_by_cfop()
-                    nat_op.save()
+                nat_op = self.get_or_create_natureza_operacao_empresa(
+                    nota_saida.emit_saida,
+                    det.prod.CFOP.valor
+                )
 
                 produto.cfop_padrao = nat_op
 
@@ -627,6 +666,7 @@ class ProcessadorNotaFiscal(object):
                 grupo_fiscal = GrupoFiscal()
                 grupo_fiscal.descricao = 'Produto: ' + \
                     str(det.prod.xProd.valor) + ' (Importado por XML)'
+                grupo_fiscal.empresa = nota_saida.emit_saida
                 if det.imposto.ICMS.regime_tributario != 1:
                     grupo_fiscal.regime_trib = '0'  # Normal
                     grupo_fiscal.save()
@@ -734,6 +774,19 @@ class ProcessadorNotaFiscal(object):
 
                 produto.unidade = unidade
                 produto.save()
+                self.salvar_configuracao_produto_empresa(
+                    produto,
+                    venda.empresa,
+                    venda=det.prod.vUnCom.valor,
+                    cfop_padrao=nat_op,
+                    grupo_fiscal=grupo_fiscal
+                )
+
+            self.salvar_configuracao_produto_empresa(
+                produto,
+                venda.empresa,
+                venda=det.prod.vUnCom.valor
+            )
 
             itens_venda.produto = produto
             itens_venda.quantidade = det.prod.qCom.valor
@@ -896,7 +949,7 @@ class ProcessadorNotaFiscal(object):
             empresas = [e for e in Empresa.objects.filter(
                 tipo_pessoa='PJ') if e.cpf_cnpj_apenas_digitos == nfe.infNFe.dest.CNPJ.valor]
             if len(empresas):
-                nota_entrada.dest_entrada = fornecedores[0]
+                nota_entrada.dest_entrada = empresas[0]
             else:
                 empresa = Empresa()
                 empresa.nome_razao_social = nfe.infNFe.dest.xNome.valor
@@ -950,6 +1003,7 @@ class ProcessadorNotaFiscal(object):
         compra.total_icms = nfe.infNFe.total.ICMSTot.vICMS.valor
         compra.total_ipi = nfe.infNFe.total.ICMSTot.vIPI.valor
         compra.status = u'3'  # Importado
+        compra.empresa = nota_entrada.dest_entrada
         compra.save()
 
         # ItensCompra/Produto/Unidade
@@ -957,6 +1011,8 @@ class ProcessadorNotaFiscal(object):
             itens_compra = ItensCompra()
             itens_compra.compra_id = compra
             produtos = Produto.objects.filter(descricao=det.prod.xProd.valor)
+            nat_op = None
+            grupo_fiscal = None
 
             # Produto
             if len(produtos):
@@ -980,15 +1036,10 @@ class ProcessadorNotaFiscal(object):
                 produto.inf_adicionais = det.infAdProd.valor
 
                 # Natureza Operacao
-                nat_ops = NaturezaOperacao.objects.filter(
-                    cfop=str(det.prod.CFOP.valor))
-                if len(nat_ops):
-                    nat_op = nat_ops[0]
-                else:
-                    nat_op = NaturezaOperacao()
-                    nat_op.cfop = str(det.prod.CFOP.valor)
-                    nat_op.set_values_by_cfop()
-                    nat_op.save()
+                nat_op = self.get_or_create_natureza_operacao_empresa(
+                    nota_entrada.dest_entrada,
+                    det.prod.CFOP.valor
+                )
 
                 produto.cfop_padrao = nat_op
 
@@ -996,6 +1047,7 @@ class ProcessadorNotaFiscal(object):
                 grupo_fiscal = GrupoFiscal()
                 grupo_fiscal.descricao = 'Produto: ' + \
                     str(det.prod.xProd.valor) + ' (Importado por XML)'
+                grupo_fiscal.empresa = nota_entrada.dest_entrada
                 if det.imposto.ICMS.regime_tributario != 1:
                     grupo_fiscal.regime_trib = '0'  # Normal
                     grupo_fiscal.save()
@@ -1100,6 +1152,19 @@ class ProcessadorNotaFiscal(object):
 
                 produto.unidade = unidade
                 produto.save()
+                self.salvar_configuracao_produto_empresa(
+                    produto,
+                    compra.empresa,
+                    custo=det.prod.vUnCom.valor,
+                    cfop_padrao=nat_op,
+                    grupo_fiscal=grupo_fiscal
+                )
+
+            self.salvar_configuracao_produto_empresa(
+                produto,
+                compra.empresa,
+                custo=det.prod.vUnCom.valor
+            )
 
             itens_compra.produto = produto
             itens_compra.quantidade = det.prod.qCom.valor
@@ -1117,9 +1182,9 @@ class ProcessadorNotaFiscal(object):
         nota_entrada.compra = compra
         nota_entrada.save()
 
-    def verificar_configuracao(self):
+    def verificar_configuracao(self, empresa=None):
         try:
-            self.conf_nfe = ConfiguracaoNotaFiscal.objects.all()[:1].get()
+            self.conf_nfe = ConfiguracaoNotaFiscal.objects.get(empresa=empresa)
         except ConfiguracaoNotaFiscal.DoesNotExist:
             return self.salvar_mensagem(message=u'Emissão de NF-e não configurada.', erro=True)
 
@@ -1136,7 +1201,8 @@ class ProcessadorNotaFiscal(object):
 
     def verificar_configuracao_nfe(self, nota_obj):
         try:
-            self.conf_nfe = ConfiguracaoNotaFiscal.objects.all()[:1].get()
+            self.conf_nfe = ConfiguracaoNotaFiscal.objects.get(
+                empresa=nota_obj.emit_saida)
         except ConfiguracaoNotaFiscal.DoesNotExist:
             e = ErrosValidacaoNotaFiscal(nfe=nota_obj)
             e.tipo = u'0'
@@ -1510,10 +1576,10 @@ class ProcessadorNotaFiscal(object):
 
         return danfce
 
-    def consultar_cadastro(self, empresa, salvar_arquivos):
+    def consultar_cadastro(self, empresa, salvar_arquivos, empresa_emitente=None):
         self.nova_nfe = nf_e()
 
-        self.verificar_configuracao()
+        self.verificar_configuracao(empresa_emitente or empresa)
         if not self.conf_nfe or not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 
@@ -1539,7 +1605,7 @@ class ProcessadorNotaFiscal(object):
             except SSLError as e:
                 return self.salvar_mensagem(message=u'Erro de autenticação: {}'.format(e), erro=True)
 
-    def inutilizar_notas(self, empresa, ambiente, modelo, serie, numero_inicial, numero_final, justificativa, salvar_arquivos):
+    def inutilizar_notas(self, empresa, ambiente, modelo, serie, numero_inicial, numero_final, justificativa, salvar_arquivos, empresa_emitente=None):
         self.nova_nfe = nf_e()
 
         if modelo == '65':
@@ -1547,7 +1613,7 @@ class ProcessadorNotaFiscal(object):
         else:
             nfce = False
 
-        self.verificar_configuracao()
+        self.verificar_configuracao(empresa_emitente or empresa)
         if not self.conf_nfe or not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 
@@ -1569,10 +1635,10 @@ class ProcessadorNotaFiscal(object):
             else:
                 return self.salvar_mensagem(message='Erro ao inutilizar notas, verifique a versão do seu aplicativo e a validade do seu certificado.', erro=True)
 
-    def consultar_nota(self, chave, ambiente, salvar_arquivos):
+    def consultar_nota(self, chave, ambiente, salvar_arquivos, empresa=None):
         self.nova_nfe = nf_e()
 
-        self.verificar_configuracao()
+        self.verificar_configuracao(empresa)
         if not self.conf_nfe or not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 
@@ -1594,10 +1660,10 @@ class ProcessadorNotaFiscal(object):
         else:
             return self.salvar_mensagem(message='Erro ao consultar nota, verifique a versão do seu aplicativo e a validade do seu certificado.', erro=True)
 
-    def baixar_nota(self, chave, ambiente, ambiente_nacional, salvar_arquivos):
+    def baixar_nota(self, chave, ambiente, ambiente_nacional, salvar_arquivos, empresa=None):
         self.nova_nfe = nf_e()
 
-        self.verificar_configuracao()
+        self.verificar_configuracao(empresa)
         if not self.conf_nfe or not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 
@@ -1621,10 +1687,10 @@ class ProcessadorNotaFiscal(object):
         else:
             return self.salvar_mensagem(message='Erro ao baixar nota, verifique a versão do seu aplicativo e a validade do seu certificado.', erro=True)
 
-    def efetuar_manifesto(self, chave, cnpj, ambiente, tipo_manifesto, justificativa, ambiente_nacional, salvar_arquivos):
+    def efetuar_manifesto(self, chave, cnpj, ambiente, tipo_manifesto, justificativa, ambiente_nacional, salvar_arquivos, empresa=None):
         self.nova_nfe = nf_e()
 
-        self.verificar_configuracao()
+        self.verificar_configuracao(empresa)
         if not self.conf_nfe or not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 

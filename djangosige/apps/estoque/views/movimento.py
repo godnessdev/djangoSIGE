@@ -11,6 +11,12 @@ from djangosige.apps.base.custom_views import CustomDetailView, CustomCreateView
 
 from djangosige.apps.estoque.forms import EntradaEstoqueForm, SaidaEstoqueForm, TransferenciaEstoqueForm, ItensMovimentoFormSet
 from djangosige.apps.estoque.models import MovimentoEstoque, EntradaEstoque, SaidaEstoque, TransferenciaEstoque, ProdutoEstocado
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa, get_empresa_ativa, filtrar_transferencias_por_empresa
+
+
+def get_transferencias_empresa_ativa(user):
+    return filtrar_transferencias_por_empresa(
+        TransferenciaEstoque.objects.all(), get_empresa_ativa(user))
 
 
 class MovimentoEstoqueMixin(object):
@@ -63,6 +69,7 @@ class MovimentoEstoqueMixin(object):
 
             lista_produtos_estocados.append(prod_estocado_orig)
             lista_produtos_estocados.append(prod_estocado_dest)
+            # No MVP, a transferencia preserva o custo atual do produto.
 
 
 class AdicionarMovimentoEstoqueBaseView(CustomCreateView, MovimentoEstoqueMixin):
@@ -79,10 +86,10 @@ class AdicionarMovimentoEstoqueBaseView(CustomCreateView, MovimentoEstoqueMixin)
     def get(self, request, *args, **kwargs):
         self.object = None
         form_class = self.get_form_class()
-        form = form_class()
+        form = form_class(user=request.user)
         form.initial['data_movimento'] = datetime.today().strftime('%d/%m/%Y')
 
-        itens_form = ItensMovimentoFormSet(prefix='itens_form')
+        itens_form = ItensMovimentoFormSet(prefix='itens_form', user=request.user)
 
         return self.render_to_response(self.get_context_data(form=form, itens_form=itens_form,))
 
@@ -99,11 +106,17 @@ class AdicionarMovimentoEstoqueBaseView(CustomCreateView, MovimentoEstoqueMixin)
         request.POST = req_post
 
         form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        itens_form = ItensMovimentoFormSet(request.POST, prefix='itens_form')
+        form = form_class(request.POST, user=request.user)
+        itens_form = ItensMovimentoFormSet(
+            request.POST, prefix='itens_form', user=request.user)
 
         if (form.is_valid() and itens_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form, itens_form=itens_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
             lista_produtos = []
             lista_produtos_estocados = []
             itens_form.instance = self.object
@@ -188,9 +201,11 @@ class MovimentoEstoqueListView(MovimentoEstoqueBaseListView):
         return context
 
     def get_queryset(self):
-        all_entradas = EntradaEstoque.objects.all()
-        all_saidas = SaidaEstoque.objects.all()
-        all_transferencias = TransferenciaEstoque.objects.all()
+        all_entradas = filtrar_queryset_por_empresa_ativa(
+            EntradaEstoque.objects.all(), self.request.user)
+        all_saidas = filtrar_queryset_por_empresa_ativa(
+            SaidaEstoque.objects.all(), self.request.user)
+        all_transferencias = get_transferencias_empresa_ativa(self.request.user)
         all_movimentos = list(
             chain(all_saidas, all_entradas, all_transferencias))
         return all_movimentos
@@ -199,12 +214,12 @@ class MovimentoEstoqueListView(MovimentoEstoqueBaseListView):
         if self.check_user_delete_permission(request, MovimentoEstoque):
             for key, value in request.POST.items():
                 if value == "on":
-                    if EntradaEstoque.objects.filter(id=key).exists():
-                        instance = EntradaEstoque.objects.get(id=key)
-                    elif SaidaEstoque.objects.filter(id=key).exists():
-                        instance = SaidaEstoque.objects.get(id=key)
-                    elif TransferenciaEstoque.objects.filter(id=key).exists():
-                        instance = TransferenciaEstoque.objects.get(id=key)
+                    if filtrar_queryset_por_empresa_ativa(EntradaEstoque.objects.all(), request.user).filter(id=key).exists():
+                        instance = filtrar_queryset_por_empresa_ativa(EntradaEstoque.objects.all(), request.user).get(id=key)
+                    elif filtrar_queryset_por_empresa_ativa(SaidaEstoque.objects.all(), request.user).filter(id=key).exists():
+                        instance = filtrar_queryset_por_empresa_ativa(SaidaEstoque.objects.all(), request.user).get(id=key)
+                    elif get_transferencias_empresa_ativa(request.user).filter(id=key).exists():
+                        instance = get_transferencias_empresa_ativa(request.user).get(id=key)
 
                     instance.delete()
         return redirect(self.success_url)
@@ -221,6 +236,10 @@ class EntradaEstoqueListView(MovimentoEstoqueBaseListView):
         context['add_url'] = reverse_lazy('estoque:addentradaestoqueview')
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            EntradaEstoque.objects.all(), self.request.user)
+
 
 class SaidaEstoqueListView(MovimentoEstoqueBaseListView):
     template_name = 'estoque/movimento/movimento_estoque_list.html'
@@ -232,6 +251,10 @@ class SaidaEstoqueListView(MovimentoEstoqueBaseListView):
         context['title_complete'] = 'SAÍDAS EM ESTOQUE'
         context['add_url'] = reverse_lazy('estoque:addsaidaestoqueview')
         return context
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            SaidaEstoque.objects.all(), self.request.user)
 
 
 class TransferenciaEstoqueListView(MovimentoEstoqueBaseListView):
@@ -245,6 +268,9 @@ class TransferenciaEstoqueListView(MovimentoEstoqueBaseListView):
         context['add_url'] = reverse_lazy(
             'estoque:addtransferenciaestoqueview')
         return context
+
+    def get_queryset(self):
+        return get_transferencias_empresa_ativa(self.request.user)
 
 
 class DetalharMovimentoEstoqueBaseView(CustomDetailView):
@@ -260,6 +286,10 @@ class DetalharMovimentoEstoqueBaseView(CustomDetailView):
 class DetalharEntradaEstoqueView(DetalharMovimentoEstoqueBaseView):
     model = EntradaEstoque
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            EntradaEstoque.objects.all(), self.request.user)
+
     def view_context(self, context):
         context['title_complete'] = 'MOVIMENTO DE ENTRADA EM ESTOQUE N°' + \
             str(self.object.id)
@@ -271,6 +301,10 @@ class DetalharEntradaEstoqueView(DetalharMovimentoEstoqueBaseView):
 class DetalharSaidaEstoqueView(DetalharMovimentoEstoqueBaseView):
     model = SaidaEstoque
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            SaidaEstoque.objects.all(), self.request.user)
+
     def view_context(self, context):
         context['title_complete'] = 'MOVIMENTO DE SAÍDA EM ESTOQUE N°' + \
             str(self.object.id)
@@ -280,6 +314,9 @@ class DetalharSaidaEstoqueView(DetalharMovimentoEstoqueBaseView):
 
 class DetalharTransferenciaEstoqueView(DetalharMovimentoEstoqueBaseView):
     model = TransferenciaEstoque
+
+    def get_queryset(self):
+        return get_transferencias_empresa_ativa(self.request.user)
 
     def view_context(self, context):
         context['title_complete'] = 'MOVIMENTO DE TRANSFERÊNCIA EM ESTOQUE N°' + \

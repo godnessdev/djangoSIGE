@@ -1,3 +1,11 @@
+{% if form.empresa_ativa %}
+<div class="col-sm-12">
+  <div class="alert alert-info">
+    Preco e custo serao salvos para a empresa ativa: <strong>{{ form.empresa_ativa.nome_razao_social }}</strong>.
+  </div>
+</div>
+{% endif %}
+
 <div class="col-sm-6">
   <div class="form-group">
     <div class="form-line">

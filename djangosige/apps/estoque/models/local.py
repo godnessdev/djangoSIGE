@@ -20,6 +20,9 @@ class ProdutoEstocado(models.Model):
 
 class LocalEstoque(models.Model):
     descricao = models.CharField(max_length=1055)
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='locais_estoque',
+        on_delete=models.CASCADE, null=True, blank=True)
     produtos_estoque = models.ManyToManyField(
         Produto, through='estoque.ProdutoEstocado')
 

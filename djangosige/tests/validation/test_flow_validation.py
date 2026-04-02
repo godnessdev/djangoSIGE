@@ -18,6 +18,7 @@ from djangosige.apps.cadastro.models import (
     Marca,
     Produto,
     Transportadora,
+    UsuarioEmpresa,
     Unidade,
 )
 from djangosige.apps.compras.models import ItensCompra, OrcamentoCompra, PedidoCompra
@@ -86,6 +87,7 @@ class LoginOperationalValidationTestCase(BaseTestCase):
         profile_edit_url = reverse("login:editarperfilview")
         empresa = Empresa.objects.create()
         usuario = Usuario.objects.get(user=self.user)
+        UsuarioEmpresa.objects.create(m_usuario=usuario, m_empresa=empresa)
         response = self.client.get(profile_edit_url)
         self.assertEqual(response.status_code, 200)
         data = response.context["form"].initial
@@ -101,6 +103,7 @@ class LoginOperationalValidationTestCase(BaseTestCase):
 
         select_company_url = reverse("login:selecionarempresaview")
         outra_empresa = Empresa.objects.filter(~Q(id=empresa.pk)).first() or Empresa.objects.create()
+        UsuarioEmpresa.objects.get_or_create(m_usuario=usuario, m_empresa=outra_empresa)
         response = self.client.post(
             select_company_url,
             {"m_empresa": outra_empresa.pk},
@@ -189,6 +192,7 @@ class CadastroOperationalValidationTestCase(BaseTestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 data = response.context["form"].initial
+                replace_none_values_in_dictionary(data)
                 if model_name == "cliente":
                     data[f"{response.context['form'].prefix}-limite_de_credito"] = data["limite_de_credito"]
                     del data["limite_de_credito"]
@@ -313,7 +317,7 @@ class VendasOperationalValidationTestCase(BaseTestCase):
                 self.assertEqual(response.get("Content-Type"), "application/pdf")
 
         action_specs = (
-            ("vendas:gerarpedidovenda", OrcamentoVenda.objects.create(cliente=cli), "vendas/pedido_venda/pedido_venda_edit.html"),
+            ("vendas:gerarpedidovenda", OrcamentoVenda.objects.create(cliente=cli, empresa=self.empresa_ativa), "vendas/pedido_venda/pedido_venda_edit.html"),
             ("vendas:copiarpedidovenda", PedidoVenda.objects.order_by("pk").last(), "vendas/pedido_venda/pedido_venda_edit.html"),
             ("vendas:copiarorcamentovenda", OrcamentoVenda.objects.order_by("pk").last(), "vendas/orcamento_venda/orcamento_venda_edit.html"),
             ("vendas:cancelarpedidovenda", PedidoVenda.objects.order_by("pk").last(), "vendas/pedido_venda/pedido_venda_edit.html"),
@@ -396,7 +400,7 @@ class ComprasOperationalValidationTestCase(BaseTestCase):
                 self.assertEqual(response.get("Content-Type"), "application/pdf")
 
         action_specs = (
-            ("compras:gerarpedidocompra", OrcamentoCompra.objects.create(fornecedor=fornecedor), "compras/pedido_compra/pedido_compra_edit.html"),
+            ("compras:gerarpedidocompra", OrcamentoCompra.objects.create(fornecedor=fornecedor, empresa=self.empresa_ativa), "compras/pedido_compra/pedido_compra_edit.html"),
             ("compras:copiarpedidocompra", PedidoCompra.objects.order_by("pk").last(), "compras/pedido_compra/pedido_compra_edit.html"),
             ("compras:copiarorcamentocompra", OrcamentoCompra.objects.order_by("pk").last(), "compras/orcamento_compra/orcamento_compra_edit.html"),
             ("compras:cancelarpedidocompra", PedidoCompra.objects.order_by("pk").last(), "compras/pedido_compra/pedido_compra_edit.html"),
@@ -412,6 +416,7 @@ class ComprasOperationalValidationTestCase(BaseTestCase):
             movimentar_estoque=True,
             fornecedor=fornecedor,
             local_dest=local_dest,
+            empresa=self.empresa_ativa,
             data_entrega=datetime.now().date(),
             status="0",
         )
@@ -558,8 +563,16 @@ class EstoqueOperationalValidationTestCase(BaseTestCase):
         self.assertTemplateUsed(response, "estoque/movimento/movimento_estoque_list.html")
 
         local_1 = LocalEstoque.objects.get(pk=DEFAULT_LOCAL_ID)
-        local_2 = LocalEstoque.objects.create(descricao="Local Transferencia Validacao")
-        transferencia_payload = {"quantidade_itens": 2, "valor_total": "460,00", "tipo_movimento": "0", "local_estoque_orig": local_1.pk, "local_estoque_dest": local_2.pk}
+        local_2 = LocalEstoque.objects.create(
+            descricao="Local Transferencia Validacao", empresa=self.empresa_ativa)
+        transferencia_payload = {
+            "quantidade_itens": 2,
+            "valor_total": "460,00",
+            "empresa_destino": self.empresa_ativa.pk,
+            "local_estoque_orig": local_1.pk,
+            "local_estoque_dest": local_2.pk,
+            "impacto_custo": "MAN",
+        }
         transferencia_payload.update(MOVIMENTO_ESTOQUE_FORMSET_DATA)
         response = self.client.post(reverse("estoque:addtransferenciaestoqueview"), transferencia_payload, follow=True)
         self.assertEqual(response.status_code, 200)
@@ -600,7 +613,8 @@ class FiscalOperationalValidationTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "fiscal/nota_fiscal/nota_fiscal_list.html")
 
-        natureza = NaturezaOperacao.objects.order_by("pk").last()
+        natureza = NaturezaOperacao.objects.filter(
+            empresa=self.empresa_ativa).order_by("pk").last()
         response = self.client.get(reverse("fiscal:editarnaturezaoperacaoview", kwargs={"pk": natureza.pk}))
         self.assertEqual(response.status_code, 200)
         data = response.context["form"].initial
@@ -609,7 +623,8 @@ class FiscalOperationalValidationTestCase(BaseTestCase):
         response = self.client.post(reverse("fiscal:editarnaturezaoperacaoview", kwargs={"pk": natureza.pk}), data, follow=True)
         self.assertEqual(response.status_code, 200)
 
-        grupo = GrupoFiscal.objects.order_by("pk").last()
+        grupo = GrupoFiscal.objects.filter(
+            empresa=self.empresa_ativa).order_by("pk").last()
         response = self.client.get(reverse("fiscal:editargrupofiscalview", kwargs={"pk": grupo.pk}))
         self.assertEqual(response.status_code, 200)
         data = response.context["form"].initial
@@ -624,7 +639,8 @@ class FiscalOperationalValidationTestCase(BaseTestCase):
         response = self.client.post(reverse("fiscal:editargrupofiscalview", kwargs={"pk": grupo.pk}), data, follow=True)
         self.assertEqual(response.status_code, 200)
 
-        nota_saida = NotaFiscalSaida.objects.order_by("pk").last()
+        nota_saida = NotaFiscalSaida.objects.filter(
+            emit_saida=self.empresa_ativa).order_by("pk").last()
         response = self.client.get(reverse("fiscal:editarnotafiscalsaidaview", kwargs={"pk": nota_saida.pk}))
         self.assertEqual(response.status_code, 200)
         data = response.context["form"].initial
@@ -635,7 +651,26 @@ class FiscalOperationalValidationTestCase(BaseTestCase):
         response = self.client.post(reverse("fiscal:editarnotafiscalsaidaview", kwargs={"pk": nota_saida.pk}), data, follow=True)
         self.assertEqual(response.status_code, 200)
 
-        nota_entrada = NotaFiscalEntrada.objects.order_by("pk").last()
+        nota_entrada = NotaFiscalEntrada.objects.filter(
+            dest_entrada=self.empresa_ativa).order_by("pk").last()
+        if nota_entrada is None:
+            nota_entrada = NotaFiscalEntrada.objects.create(
+                versao="3.10",
+                natop="Natureza entrada validacao",
+                indpag="0",
+                mod="55",
+                serie="1",
+                dhemi=timezone.now(),
+                iddest="1",
+                tp_imp="1",
+                tp_emis="1",
+                tp_amb="2",
+                fin_nfe="1",
+                ind_final="0",
+                ind_pres="0",
+                status_nfe="3",
+                n_nf_entrada="9902",
+                dest_entrada=self.empresa_ativa)
         response = self.client.get(reverse("fiscal:editarnotafiscalentradaview", kwargs={"pk": nota_entrada.pk}))
         self.assertEqual(response.status_code, 200)
         data = response.context["form"].initial
@@ -645,7 +680,8 @@ class FiscalOperationalValidationTestCase(BaseTestCase):
         response = self.client.post(reverse("fiscal:editarnotafiscalentradaview", kwargs={"pk": nota_entrada.pk}), data, follow=True)
         self.assertEqual(response.status_code, 200)
 
-        pedido = PedidoVenda.objects.order_by("pk").last()
+        pedido = PedidoVenda.objects.filter(
+            empresa=self.empresa_ativa).order_by("pk").last()
         response = self.client.get(reverse("fiscal:gerarnotafiscalsaida", kwargs={"pk": pedido.pk}), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(isinstance(response.context["object"], NotaFiscalSaida))

@@ -5,9 +5,15 @@ from djangosige.apps.base.custom_views import CustomCreateView, CustomListView, 
 from djangosige.apps.cadastro.forms import PessoaJuridicaForm, PessoaFisicaForm, EnderecoFormSet, TelefoneFormSet, EmailFormSet, \
     SiteFormSet, BancoFormSet, DocumentoFormSet
 from djangosige.apps.cadastro.models import PessoaFisica, PessoaJuridica, Endereco, Telefone, Email, Site, Banco, Documento
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 
 
 class AdicionarPessoaView(CustomCreateView):
+
+    def _aplicar_empresa_ativa(self, request, instance):
+        if hasattr(instance, 'empresa_relacionada_id'):
+            instance.empresa_relacionada = get_empresa_ativa(request.user)
+        return instance
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, nome_razao_social=self.object.nome_razao_social)
@@ -69,6 +75,7 @@ class AdicionarPessoaView(CustomCreateView):
         if form.is_valid():
 
             self.object = form.save(commit=False)
+            self.object = self._aplicar_empresa_ativa(request, self.object)
             if self.object.tipo_pessoa == 'PJ':
                 pessoa_form = PessoaJuridicaForm(
                     request.POST, prefix='pessoa_jur_form')
@@ -153,6 +160,11 @@ class PessoasListView(CustomListView):
 
 class EditarPessoaView(CustomUpdateView):
 
+    def _aplicar_empresa_ativa(self, request, instance):
+        if hasattr(instance, 'empresa_relacionada_id'):
+            instance.empresa_relacionada = get_empresa_ativa(request.user)
+        return instance
+
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, nome_razao_social=self.object.nome_razao_social)
 
@@ -234,6 +246,7 @@ class EditarPessoaView(CustomUpdateView):
 
         if form.is_valid():
             self.object = form.save(commit=False)
+            self.object = self._aplicar_empresa_ativa(request, self.object)
             if self.object.tipo_pessoa == 'PJ':
                 pessoa_form = PessoaJuridicaForm(
                     request.POST, prefix='pessoa_jur_form')

@@ -3,6 +3,7 @@
 from django.urls import reverse_lazy
 
 from djangosige.apps.cadastro.forms import FornecedorForm
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa
 from djangosige.apps.cadastro.models import Fornecedor
 
 from .base import AdicionarPessoaView, PessoasListView, EditarPessoaView
@@ -38,6 +39,7 @@ class FornecedoresListView(PessoasListView):
     context_object_name = 'all_fornecedores'
     success_url = reverse_lazy('cadastro:listafornecedoresview')
     permission_codename = 'view_fornecedor'
+    paginate_by = 100
 
     def get_context_data(self, **kwargs):
         context = super(FornecedoresListView, self).get_context_data(**kwargs)
@@ -45,6 +47,12 @@ class FornecedoresListView(PessoasListView):
         context['add_url'] = reverse_lazy('cadastro:addfornecedorview')
         context['tipo_pessoa'] = 'fornecedor'
         return context
+
+    def get_queryset(self):
+        queryset = Fornecedor.objects.select_related(
+            'pessoa_jur_info', 'pessoa_fis_info', 'endereco_padrao').order_by('-id')
+        return filtrar_queryset_por_empresa_ativa(
+            queryset, self.request.user, field_name='empresa_relacionada')
 
 
 class EditarFornecedorView(EditarPessoaView):
@@ -68,6 +76,10 @@ class EditarFornecedorView(EditarPessoaView):
         form = self.get_form(form_class)
 
         return super(EditarFornecedorView, self).get(request, form, *args, **kwargs)
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            Fornecedor.objects.all(), self.request.user, field_name='empresa_relacionada')
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()

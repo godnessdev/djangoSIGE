@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.template.defaultfilters import date
 from django.core.validators import MinValueValidator
 from django.urls import reverse_lazy
@@ -118,6 +119,21 @@ class ItensVenda(models.Model):
     def vprod(self):
         return round(self.quantidade * self.valor_unit, 2)
 
+    def get_empresa(self):
+        if self.venda_id:
+            return self.venda_id.empresa
+        return None
+
+    def get_grupo_fiscal(self):
+        if self.produto:
+            return self.produto.get_grupo_fiscal_empresa(self.get_empresa())
+        return None
+
+    def get_cfop_padrao(self):
+        if self.produto:
+            return self.produto.get_cfop_padrao(self.get_empresa())
+        return ''
+
     @property
     def vbc_uf_dest(self):
         return self.subtotal + self.vipi
@@ -125,7 +141,8 @@ class ItensVenda(models.Model):
     @property
     def vicms_cred_sn(self):
         try:
-            icms_obj = self.produto.grupo_fiscal.icms_sn_padrao.get()
+            grupo_fiscal = self.get_grupo_fiscal()
+            icms_obj = grupo_fiscal.icms_sn_padrao.get()
             if icms_obj.p_cred_sn:
                 return round((self.subtotal * icms_obj.p_cred_sn) / 100, 2)
             else:
@@ -165,7 +182,8 @@ class ItensVenda(models.Model):
 
     def get_mot_deson_icms(self):
         try:
-            icms_obj = self.produto.grupo_fiscal.icms_padrao.get()
+            grupo_fiscal = self.get_grupo_fiscal()
+            icms_obj = grupo_fiscal.icms_padrao.get()
             if icms_obj.mot_des_icms:
                 return icms_obj.get_mot_des_icms_display()
             else:
@@ -193,8 +211,9 @@ class ItensVenda(models.Model):
 
     def get_aliquota_pis(self, format=True):
         try:
+            grupo_fiscal = self.get_grupo_fiscal()
             pis_padrao = PIS.objects.get(
-                grupo_fiscal=self.produto.grupo_fiscal)
+                grupo_fiscal=grupo_fiscal)
 
             if pis_padrao.valiq_pis:
                 if format:
@@ -212,8 +231,9 @@ class ItensVenda(models.Model):
 
     def get_aliquota_cofins(self, format=True):
         try:
+            grupo_fiscal = self.get_grupo_fiscal()
             cofins_padrao = COFINS.objects.get(
-                grupo_fiscal=self.produto.grupo_fiscal)
+                grupo_fiscal=grupo_fiscal)
 
             if cofins_padrao.valiq_cofins:
                 if format:
@@ -236,13 +256,14 @@ class ItensVenda(models.Model):
         if self.desconto:
             vbc -= self.desconto
 
-        if self.produto.grupo_fiscal:
+        grupo_fiscal = self.get_grupo_fiscal()
+        if grupo_fiscal:
 
             try:
                 pis_padrao = PIS.objects.get(
-                    grupo_fiscal=self.produto.grupo_fiscal)
+                    grupo_fiscal=grupo_fiscal)
                 cofins_padrao = COFINS.objects.get(
-                    grupo_fiscal=self.produto.grupo_fiscal)
+                    grupo_fiscal=grupo_fiscal)
 
                 # Calculo Vl. PIS
                 if pis_padrao.valiq_pis:
@@ -265,6 +286,9 @@ class ItensVenda(models.Model):
 
 
 class Venda(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='vendas',
+        on_delete=models.CASCADE, null=True, blank=True)
     # Cliente
     cliente = models.ForeignKey(
         'cadastro.Cliente', related_name="venda_cliente", on_delete=models.CASCADE)
@@ -304,6 +328,13 @@ class Venda(models.Model):
     def get_total_sem_imposto(self):
         total_sem_imposto = self.valor_total - self.impostos
         return total_sem_imposto
+
+    def clean(self):
+        errors = {}
+        if self.empresa and self.local_orig and self.local_orig.empresa_id != self.empresa_id:
+            errors['local_orig'] = 'O local de origem precisa pertencer a empresa ativa.'
+        if errors:
+            raise ValidationError(errors)
 
     def get_total_produtos(self):
         itens = ItensVenda.objects.filter(venda_id=self.id)

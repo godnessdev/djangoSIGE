@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from collections import OrderedDict
 from decimal import Decimal
 from django.views.generic import TemplateView
 from django.shortcuts import render
@@ -9,6 +10,7 @@ from django.db.models.functions import Coalesce
 from django.urls import reverse
 
 from djangosige.apps.cadastro.models import Cliente, Fornecedor, Produto, Empresa, Transportadora
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 from djangosige.apps.vendas.models import OrcamentoVenda, PedidoVenda
 from djangosige.apps.compras.models import OrcamentoCompra, PedidoCompra
 from djangosige.apps.financeiro.models import MovimentoCaixa, Entrada, Saida
@@ -73,6 +75,34 @@ class IndexView(TemplateView):
             'action_class': action_class,
             'show_action': is_active,
         }
+
+    def _build_movimento_snapshot(self, movimentos):
+        if not movimentos:
+            return None
+
+        movimentos = sorted(movimentos, key=lambda movimento: movimento.id)
+        ultimo_movimento = movimentos[-1]
+        entradas = sum((movimento.entradas for movimento in movimentos), Decimal('0.00'))
+        saidas = sum((movimento.saidas for movimento in movimentos), Decimal('0.00'))
+        saldo_inicial = movimentos[0].saldo_inicial
+        saldo_final = ultimo_movimento.saldo_final
+
+        class MovimentoSnapshot(object):
+            pass
+
+        snapshot = MovimentoSnapshot()
+        snapshot.data_movimento = ultimo_movimento.data_movimento
+        snapshot.saldo_inicial = saldo_inicial
+        snapshot.saldo_final = saldo_final
+        snapshot.entradas = entradas
+        snapshot.saidas = saidas
+        return snapshot
+
+    def _group_movimentos_by_date(self, queryset):
+        grouped = OrderedDict()
+        for movimento in queryset.order_by('data_movimento', 'id'):
+            grouped.setdefault(movimento.data_movimento, []).append(movimento)
+        return [self._build_movimento_snapshot(movimentos) for movimentos in grouped.values()]
 
     def _build_chart(self, movimentos, data_atual):
         chart_dates = [data_atual - timedelta(days=offset) for offset in range(6, -1, -1)]
@@ -148,81 +178,105 @@ class IndexView(TemplateView):
         agenda_hoje = {}
         alertas = {}
         data_atual = datetime.now().date()
+        empresa_ativa = get_empresa_ativa(self.request.user)
+
+        vendas_qs = PedidoVenda.objects.all()
+        compras_qs = PedidoCompra.objects.all()
+        orcamentos_venda_qs = OrcamentoVenda.objects.all()
+        orcamentos_compra_qs = OrcamentoCompra.objects.all()
+        entradas_qs = Entrada.objects.all()
+        saidas_qs = Saida.objects.all()
+        movimentos_caixa_qs = MovimentoCaixa.objects.all()
+        clientes_qs = Cliente.objects.all()
+        fornecedores_qs = Fornecedor.objects.all()
+        transportadoras_qs = Transportadora.objects.all()
+
+        if empresa_ativa:
+            vendas_qs = vendas_qs.filter(empresa=empresa_ativa)
+            compras_qs = compras_qs.filter(empresa=empresa_ativa)
+            orcamentos_venda_qs = orcamentos_venda_qs.filter(empresa=empresa_ativa)
+            orcamentos_compra_qs = orcamentos_compra_qs.filter(empresa=empresa_ativa)
+            entradas_qs = entradas_qs.filter(empresa=empresa_ativa)
+            saidas_qs = saidas_qs.filter(empresa=empresa_ativa)
+            movimentos_caixa_qs = movimentos_caixa_qs.filter(empresa=empresa_ativa)
+            clientes_qs = clientes_qs.filter(empresa_relacionada=empresa_ativa)
+            fornecedores_qs = fornecedores_qs.filter(empresa_relacionada=empresa_ativa)
+            transportadoras_qs = transportadoras_qs.filter(empresa_relacionada=empresa_ativa)
 
         context['data_atual'] = data_atual.strftime('%d/%m/%Y')
 
-        quantidade_cadastro['clientes'] = Cliente.objects.all().count()
-        quantidade_cadastro['fornecedores'] = Fornecedor.objects.all().count()
+        quantidade_cadastro['clientes'] = clientes_qs.count()
+        quantidade_cadastro['fornecedores'] = fornecedores_qs.count()
         quantidade_cadastro['produtos'] = Produto.objects.all().count()
         quantidade_cadastro['empresas'] = Empresa.objects.all().count()
-        quantidade_cadastro[
-            'transportadoras'] = Transportadora.objects.all().count()
+        quantidade_cadastro['transportadoras'] = transportadoras_qs.count()
         context['quantidade_cadastro'] = quantidade_cadastro
 
-        agenda_hoje['orcamento_venda_hoje'] = OrcamentoVenda.objects.filter(
+        agenda_hoje['orcamento_venda_hoje'] = orcamentos_venda_qs.filter(
             data_vencimento=data_atual, status='0').count()
-        agenda_hoje['orcamento_compra_hoje'] = OrcamentoCompra.objects.filter(
+        agenda_hoje['orcamento_compra_hoje'] = orcamentos_compra_qs.filter(
             data_vencimento=data_atual, status='0').count()
-        agenda_hoje['pedido_venda_hoje'] = PedidoVenda.objects.filter(
+        agenda_hoje['pedido_venda_hoje'] = vendas_qs.filter(
             data_entrega=data_atual, status='0').count()
-        agenda_hoje['pedido_compra_hoje'] = PedidoCompra.objects.filter(
+        agenda_hoje['pedido_compra_hoje'] = compras_qs.filter(
             data_entrega=data_atual, status='0').count()
-        agenda_hoje['contas_receber_hoje'] = Entrada.objects.filter(
+        agenda_hoje['contas_receber_hoje'] = entradas_qs.filter(
             data_vencimento=data_atual, status__in=['1', '2']).count()
-        agenda_hoje['contas_pagar_hoje'] = Saida.objects.filter(
+        agenda_hoje['contas_pagar_hoje'] = saidas_qs.filter(
             data_vencimento=data_atual, status__in=['1', '2']).count()
         context['agenda_hoje'] = agenda_hoje
 
         alertas['produtos_baixo_estoque'] = Produto.objects.filter(
             estoque_atual__lte=F('estoque_minimo')).count()
-        alertas['orcamentos_venda_vencidos'] = OrcamentoVenda.objects.filter(
+        alertas['orcamentos_venda_vencidos'] = orcamentos_venda_qs.filter(
             data_vencimento__lte=data_atual, status='0').count()
-        alertas['pedidos_venda_atrasados'] = PedidoVenda.objects.filter(
+        alertas['pedidos_venda_atrasados'] = vendas_qs.filter(
             data_entrega__lte=data_atual, status='0').count()
-        alertas['orcamentos_compra_vencidos'] = OrcamentoCompra.objects.filter(
+        alertas['orcamentos_compra_vencidos'] = orcamentos_compra_qs.filter(
             data_vencimento__lte=data_atual, status='0').count()
-        alertas['pedidos_compra_atrasados'] = PedidoCompra.objects.filter(
+        alertas['pedidos_compra_atrasados'] = compras_qs.filter(
             data_entrega__lte=data_atual, status='0').count()
-        alertas['contas_receber_atrasadas'] = Entrada.objects.filter(
+        alertas['contas_receber_atrasadas'] = entradas_qs.filter(
             data_vencimento__lte=data_atual, status__in=['1', '2']).count()
-        alertas['contas_pagar_atrasadas'] = Saida.objects.filter(
+        alertas['contas_pagar_atrasadas'] = saidas_qs.filter(
             data_vencimento__lte=data_atual, status__in=['1', '2']).count()
         context['alertas'] = alertas
 
-        try:
-            context['movimento_dia'] = MovimentoCaixa.objects.get(
-                data_movimento=data_atual)
-        except (MovimentoCaixa.DoesNotExist, ObjectDoesNotExist):
-            ultimo_mvmt = MovimentoCaixa.objects.filter(
-                data_movimento__lt=data_atual)
-            if ultimo_mvmt:
-                context['saldo'] = ultimo_mvmt.latest(
-                    'data_movimento').saldo_final
+        movimentos_hoje = list(movimentos_caixa_qs.filter(data_movimento=data_atual))
+        if movimentos_hoje:
+            context['movimento_dia'] = self._build_movimento_snapshot(movimentos_hoje)
+        else:
+            ultimo_mvmt = movimentos_caixa_qs.filter(data_movimento__lt=data_atual)
+            if ultimo_mvmt.exists():
+                context['saldo'] = ultimo_mvmt.order_by('data_movimento', 'id').last().saldo_final
             else:
                 context['saldo'] = '0,00'
 
         movimento_dia = context.get('movimento_dia')
         saldo_atual = getattr(movimento_dia, 'saldo_final', None)
         if saldo_atual is None:
-            saldo_atual = ultimo_mvmt.latest('data_movimento').saldo_final if 'ultimo_mvmt' in locals() and ultimo_mvmt else Decimal('0.00')
+            saldo_atual = (
+                ultimo_mvmt.order_by('data_movimento', 'id').last().saldo_final
+                if 'ultimo_mvmt' in locals() and ultimo_mvmt else Decimal('0.00')
+            )
         entradas_hoje_valor = getattr(movimento_dia, 'entradas', Decimal('0.00')) if movimento_dia else Decimal('0.00')
         saidas_hoje_valor = getattr(movimento_dia, 'saidas', Decimal('0.00')) if movimento_dia else Decimal('0.00')
         resultado_hoje_valor = entradas_hoje_valor - saidas_hoje_valor
 
-        contas_receber_hoje_qs = Entrada.objects.filter(data_vencimento=data_atual, status__in=['1', '2'])
-        contas_pagar_hoje_qs = Saida.objects.filter(data_vencimento=data_atual, status__in=['1', '2'])
-        contas_receber_atrasadas_qs = Entrada.objects.filter(data_vencimento__lt=data_atual, status__in=['1', '2'])
-        contas_pagar_atrasadas_qs = Saida.objects.filter(data_vencimento__lt=data_atual, status__in=['1', '2'])
+        contas_receber_hoje_qs = entradas_qs.filter(data_vencimento=data_atual, status__in=['1', '2'])
+        contas_pagar_hoje_qs = saidas_qs.filter(data_vencimento=data_atual, status__in=['1', '2'])
+        contas_receber_atrasadas_qs = entradas_qs.filter(data_vencimento__lt=data_atual, status__in=['1', '2'])
+        contas_pagar_atrasadas_qs = saidas_qs.filter(data_vencimento__lt=data_atual, status__in=['1', '2'])
 
         contas_receber_hoje_valor = self._sum_queryset(contas_receber_hoje_qs)
         contas_pagar_hoje_valor = self._sum_queryset(contas_pagar_hoje_qs)
         contas_receber_atrasadas_valor = self._sum_queryset(contas_receber_atrasadas_qs)
         contas_pagar_atrasadas_valor = self._sum_queryset(contas_pagar_atrasadas_qs)
 
-        open_sales = PedidoVenda.objects.filter(status='0').count()
-        open_purchases = PedidoCompra.objects.filter(status='0').count()
-        open_sale_quotes = OrcamentoVenda.objects.filter(status='0').count()
-        open_purchase_quotes = OrcamentoCompra.objects.filter(status='0').count()
+        open_sales = vendas_qs.filter(status='0').count()
+        open_purchases = compras_qs.filter(status='0').count()
+        open_sale_quotes = orcamentos_venda_qs.filter(status='0').count()
+        open_purchase_quotes = orcamentos_compra_qs.filter(status='0').count()
 
         user = self.request.user
         kpi_cards = []
@@ -419,17 +473,19 @@ class IndexView(TemplateView):
         if user.has_perm('financeiro.acesso_fluxodecaixa'):
             quick_actions.append({'label': 'Fluxo de caixa', 'href': reverse('financeiro:fluxodecaixaview'), 'style': 'ghost'})
 
-        recent_movements = MovimentoCaixa.objects.filter(
+        recent_movements = movimentos_caixa_qs.filter(
             data_movimento__gte=data_atual - timedelta(days=6),
             data_movimento__lte=data_atual,
-        ).order_by('data_movimento')
+        )
 
         context['dashboard_kpis'] = kpi_cards
         context['dashboard_alerts'] = alert_cards
         context['dashboard_operations'] = operation_cards
         context['dashboard_cadastros'] = cadastro_cards
         context['dashboard_quick_actions'] = quick_actions
-        context['dashboard_chart'] = self._build_chart(recent_movements, data_atual)
+        context['dashboard_chart'] = self._build_chart(
+            self._group_movimentos_by_date(recent_movements), data_atual
+        )
         context['dashboard_financial_snapshot'] = [
             self._make_stat_card(
                 title='A receber hoje',

@@ -35,6 +35,18 @@ coverage.xml
 
 # djangoSige
 migrations/
+!djangosige/apps/cadastro/migrations/
+!djangosige/apps/cadastro/migrations/*.py
+!djangosige/apps/estoque/migrations/
+!djangosige/apps/estoque/migrations/*.py
+!djangosige/apps/compras/migrations/
+!djangosige/apps/compras/migrations/*.py
+!djangosige/apps/vendas/migrations/
+!djangosige/apps/vendas/migrations/*.py
+!djangosige/apps/financeiro/migrations/
+!djangosige/apps/financeiro/migrations/*.py
+!djangosige/apps/fiscal/migrations/
+!djangosige/apps/fiscal/migrations/*.py
 ArquivosXML/
 arquivos/
 setup.py

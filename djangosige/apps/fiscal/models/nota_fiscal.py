@@ -272,6 +272,9 @@ class AutXML(models.Model):
 
 
 class ConfiguracaoNotaFiscal(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name="configuracoes_nfe",
+        on_delete=models.CASCADE, null=True, blank=True)
     arquivo_certificado_a1 = models.FileField(
         upload_to='arquivos/certificado/', null=True, blank=True)
     senha_certificado = models.CharField(max_length=255, null=True, blank=True)

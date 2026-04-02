@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 
 from djangosige.apps.vendas.models import OrcamentoVenda, PedidoVenda, ItensVenda, Venda
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 
 
 class VendaForm(forms.ModelForm):
@@ -12,6 +13,7 @@ class VendaForm(forms.ModelForm):
         attrs={'class': 'form-control decimal-mask', 'readonly': True}), label='Total s/ imposto (R$)', required=False)
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(VendaForm, self).__init__(*args, **kwargs)
         self.fields['status'].initial = '0'
 
@@ -35,6 +37,15 @@ class VendaForm(forms.ModelForm):
 
         self.fields['impostos'].localize = True
         self.fields['impostos'].initial = '0.00'
+
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['cliente'].queryset = self.fields['cliente'].queryset.filter(
+                empresa_relacionada=empresa)
+            self.fields['transportadora'].queryset = self.fields['transportadora'].queryset.filter(
+                empresa_relacionada=empresa)
+            self.fields['local_orig'].queryset = self.fields['local_orig'].queryset.filter(
+                empresa=empresa)
 
     class Meta:
         fields = ('data_emissao', 'cliente', 'ind_final', 'transportadora', 'mod_frete', 'veiculo', 'vendedor', 'desconto', 'local_orig',

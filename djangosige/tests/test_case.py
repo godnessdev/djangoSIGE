@@ -7,6 +7,15 @@ from django.db.models.fields.files import FieldFile
 
 import json
 
+from djangosige.apps.cadastro.models import Empresa, MinhaEmpresa, UsuarioEmpresa, Cliente, Fornecedor, Transportadora
+from djangosige.apps.compras.models import Compra
+from djangosige.apps.estoque.models import LocalEstoque, MovimentoEstoque
+from djangosige.apps.financeiro.models import Lancamento, MovimentoCaixa
+from djangosige.apps.financeiro.models import PlanoContasGrupo
+from djangosige.apps.fiscal.models import ConfiguracaoNotaFiscal, GrupoFiscal, NaturezaOperacao, NotaFiscalSaida, NotaFiscalEntrada
+from djangosige.apps.login.models import Usuario
+from djangosige.apps.vendas.models import Venda
+
 TEST_USERNAME = "test"
 TEST_PASSWORD = "testpass"
 TEST_EMAIL = "test@test.com"
@@ -23,7 +32,48 @@ class BaseTestCase(TestCase):
             self.user = User.objects.create_user(
                 TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD)
 
+        self.usuario = Usuario.objects.get_or_create(user=self.user)[0]
+        self.empresa_ativa = Empresa.objects.order_by('pk').first() or Empresa.objects.create(
+            nome_razao_social='Empresa Teste', tipo_pessoa='PJ')
+        UsuarioEmpresa.objects.get_or_create(
+            m_usuario=self.usuario, m_empresa=self.empresa_ativa)
+        MinhaEmpresa.objects.update_or_create(
+            m_usuario=self.usuario,
+            defaults={'m_empresa': self.empresa_ativa})
+        self._backfill_empresa_operacional()
         self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+
+    def _backfill_empresa_operacional(self):
+        LocalEstoque.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        Compra.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        Venda.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        MovimentoEstoque.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        Cliente.objects.filter(empresa_relacionada__isnull=True).update(
+            empresa_relacionada=self.empresa_ativa)
+        Fornecedor.objects.filter(empresa_relacionada__isnull=True).update(
+            empresa_relacionada=self.empresa_ativa)
+        Transportadora.objects.filter(empresa_relacionada__isnull=True).update(
+            empresa_relacionada=self.empresa_ativa)
+        Lancamento.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        MovimentoCaixa.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        PlanoContasGrupo.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        NaturezaOperacao.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        GrupoFiscal.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        ConfiguracaoNotaFiscal.objects.filter(empresa__isnull=True).update(
+            empresa=self.empresa_ativa)
+        NotaFiscalSaida.objects.filter(emit_saida__isnull=True).update(
+            emit_saida=self.empresa_ativa)
+        NotaFiscalEntrada.objects.filter(dest_entrada__isnull=True).update(
+            dest_entrada=self.empresa_ativa)
 
     def check_user_get_permission(self, url, permission_codename):
         if not isinstance(permission_codename, list):

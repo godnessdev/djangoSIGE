@@ -14,6 +14,9 @@ INDICADOR_IE_DEST = [
 
 
 class Cliente(Pessoa):
+    empresa_relacionada = models.ForeignKey(
+        'cadastro.Empresa', related_name='clientes',
+        on_delete=models.CASCADE, null=True, blank=True)
     limite_de_credito = models.DecimalField(
         max_digits=15, decimal_places=2, default=Decimal('0.00'), null=True, blank=True)
     indicador_ie = models.CharField(

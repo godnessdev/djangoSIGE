@@ -28,7 +28,9 @@ class AdicionarProdutoView(CustomCreateView):
         return context
 
     def get(self, request, *args, **kwargs):
-        return super(AdicionarProdutoView, self).get(request, *args, **kwargs)
+        self.object = None
+        form = self.form_class(user=request.user)
+        return self.render_to_response(self.get_context_data(form=form))
 
     def post(self, request, *args, **kwargs):
         self.object = None
@@ -52,7 +54,7 @@ class AdicionarProdutoView(CustomCreateView):
         request.POST = req_post
 
         form_class = self.get_form_class()
-        form = self.get_form(form_class)
+        form = form_class(request.POST, user=request.user)
 
         if form.is_valid():
             self.object = form.save(commit=False)
@@ -71,8 +73,7 @@ class AdicionarProdutoView(CustomCreateView):
                     self.object.venda * form.cleaned_data['estoque_inicial'], 2)
 
                 if form.cleaned_data['fornecedor']:
-                    mov_inicial.fornecedor = Fornecedor.objects.get(
-                        id=form.cleaned_data['fornecedor'])
+                    mov_inicial.fornecedor = form.cleaned_data['fornecedor']
                 if form.cleaned_data['local_dest']:
                     mov_inicial.local_dest = form.cleaned_data['local_dest']
 
@@ -86,6 +87,7 @@ class AdicionarProdutoView(CustomCreateView):
                 self.object.estoque_atual = form.cleaned_data[
                     'estoque_inicial']
                 self.object.save()
+                form.save_company_configuration(self.object)
                 mov_inicial.save()
 
                 item_entrada.movimento_id = mov_inicial
@@ -97,6 +99,7 @@ class AdicionarProdutoView(CustomCreateView):
 
             else:
                 self.object.save()
+                form.save_company_configuration(self.object)
 
             return self.form_valid(form)
 
@@ -109,12 +112,16 @@ class ProdutosListView(CustomListView):
     context_object_name = 'all_produtos'
     success_url = reverse_lazy('cadastro:listaprodutosview')
     permission_codename = 'view_produto'
+    paginate_by = 100
 
     def get_context_data(self, **kwargs):
         context = super(ProdutosListView, self).get_context_data(**kwargs)
         context['title_complete'] = 'PRODUTOS CADASTRADOS'
         context['add_url'] = reverse_lazy('cadastro:addprodutoview')
         return context
+
+    def get_queryset(self):
+        return Produto.objects.select_related('categoria').order_by('-id')
 
 
 class ProdutosBaixoEstoqueListView(ProdutosListView):
@@ -127,7 +134,8 @@ class ProdutosBaixoEstoqueListView(ProdutosListView):
         return context
 
     def get_queryset(self):
-        return Produto.objects.filter(estoque_atual__lte=F('estoque_minimo'))
+        return Produto.objects.filter(
+            estoque_atual__lte=F('estoque_minimo')).select_related('categoria').order_by('-id')
 
 
 class EditarProdutoView(CustomUpdateView):
@@ -168,7 +176,7 @@ class EditarProdutoView(CustomUpdateView):
         request.POST = req_post
 
         form_class = self.get_form_class()
-        form = form_class(request.POST, instance=self.object)
+        form = form_class(request.POST, instance=self.object, user=request.user)
 
         if form.is_valid():
             self.object = form.save()

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
@@ -115,6 +116,52 @@ class Produto(models.Model):
     class Meta:
         verbose_name = "Produto"
 
+    def get_configuracao_empresa(self, empresa=None):
+        if not empresa:
+            return None
+        if not hasattr(self, '_configuracao_empresa_cache'):
+            self._configuracao_empresa_cache = {}
+        if empresa.pk not in self._configuracao_empresa_cache:
+            self._configuracao_empresa_cache[empresa.pk] = self.configuracoes_empresa.filter(
+                empresa=empresa).first()
+        return self._configuracao_empresa_cache[empresa.pk]
+
+    def get_venda_empresa(self, empresa=None):
+        configuracao = self.get_configuracao_empresa(empresa)
+        if configuracao and configuracao.venda is not None:
+            return configuracao.venda
+        return self.venda
+
+    def get_custo_empresa(self, empresa=None):
+        configuracao = self.get_configuracao_empresa(empresa)
+        if configuracao and configuracao.custo is not None:
+            return configuracao.custo
+        return self.custo
+
+    def get_cfop_padrao_obj(self, empresa=None):
+        configuracao = self.get_configuracao_empresa(empresa)
+        if configuracao and configuracao.cfop_padrao:
+            return configuracao.cfop_padrao
+        if empresa and self.cfop_padrao and self.cfop_padrao.empresa_id not in (None, empresa.pk):
+            return None
+        return self.cfop_padrao
+
+    def get_grupo_fiscal_empresa(self, empresa=None):
+        configuracao = self.get_configuracao_empresa(empresa)
+        if configuracao and configuracao.grupo_fiscal:
+            return configuracao.grupo_fiscal
+        if empresa and self.grupo_fiscal and self.grupo_fiscal.empresa_id not in (None, empresa.pk):
+            return None
+        return self.grupo_fiscal
+
+    def get_estoque_atual_empresa(self, empresa=None):
+        if not empresa:
+            return self.estoque_atual
+        produtos_estocados = self.produto_estocado.filter(local__empresa=empresa)
+        if produtos_estocados.exists():
+            return sum(produto_estocado.quantidade for produto_estocado in produtos_estocados)
+        return self.estoque_atual
+
     @property
     def format_unidade(self):
         if self.unidade:
@@ -128,9 +175,10 @@ class Produto(models.Model):
         else:
             return ''
 
-    def get_cfop_padrao(self):
-        if self.cfop_padrao:
-            return self.cfop_padrao.cfop
+    def get_cfop_padrao(self, empresa=None):
+        cfop_padrao = self.get_cfop_padrao_obj(empresa)
+        if cfop_padrao:
+            return cfop_padrao.cfop
         else:
             return ''
 
@@ -140,4 +188,47 @@ class Produto(models.Model):
 
     def __str__(self):
         s = u'%s' % (self.descricao)
+        return s
+
+
+class ProdutoEmpresa(models.Model):
+    produto = models.ForeignKey(
+        'cadastro.Produto', related_name='configuracoes_empresa',
+        on_delete=models.CASCADE)
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='configuracoes_produto',
+        on_delete=models.CASCADE)
+    custo = models.DecimalField(max_digits=16, decimal_places=2, validators=[
+        MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'))
+    venda = models.DecimalField(max_digits=16, decimal_places=2, validators=[
+        MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'))
+    cfop_padrao = models.ForeignKey(
+        'fiscal.NaturezaOperacao', null=True, blank=True, on_delete=models.PROTECT)
+    grupo_fiscal = models.ForeignKey(
+        'fiscal.GrupoFiscal', null=True, blank=True, on_delete=models.PROTECT)
+
+    class Meta:
+        unique_together = ('produto', 'empresa')
+        verbose_name = "Configuracao de Produto por Empresa"
+
+    def clean(self):
+        if self.cfop_padrao and self.empresa and self.cfop_padrao.empresa_id not in (None, self.empresa_id):
+            raise ValidationError({
+                'cfop_padrao': 'Selecione um CFOP da empresa configurada.'
+            })
+        if self.grupo_fiscal and self.empresa and self.grupo_fiscal.empresa_id not in (None, self.empresa_id):
+            raise ValidationError({
+                'grupo_fiscal': 'Selecione um grupo fiscal da empresa configurada.'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(ProdutoEmpresa, self).save(*args, **kwargs)
+
+    def __unicode__(self):
+        s = u'%s - %s' % (self.produto, self.empresa)
+        return s
+
+    def __str__(self):
+        s = u'%s - %s' % (self.produto, self.empresa)
         return s

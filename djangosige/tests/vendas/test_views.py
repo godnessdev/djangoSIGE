@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from djangosige.tests.test_case import BaseTestCase
-from djangosige.apps.cadastro.models import Cliente
+import json
+
+from django.contrib.auth.models import Group
+from djangosige.apps.cadastro.models import Cliente, Empresa, Produto, ProdutoEmpresa
 from djangosige.apps.vendas.models import CondicaoPagamento, OrcamentoVenda, PedidoVenda
+from djangosige.apps.cadastro.models import MinhaEmpresa, UsuarioEmpresa
 from djangosige.apps.estoque.models import LocalEstoque, DEFAULT_LOCAL_ID
+from djangosige.apps.fiscal.models import NaturezaOperacao
 from django.urls import reverse
 
 from datetime import datetime, timedelta
@@ -36,6 +41,32 @@ VENDA_FORMSET_DATA = {
     'pagamento_form-TOTAL_FORMS': 1,
     'pagamento_form-INITIAL_FORMS': 0,
 }
+
+
+def configurar_grupo_empresarial(test_case):
+    matriz = Empresa.objects.create(
+        nome_razao_social='Matriz Vendas',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_MATRIZ)
+    filial = Empresa.objects.create(
+        nome_razao_social='Filial Vendas',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_FILIAL,
+        empresa_pai=matriz)
+    cliente_matriz = Cliente.objects.create(
+        nome_razao_social='Cliente Matriz Vendas',
+        tipo_pessoa='PJ',
+        empresa_relacionada=matriz)
+    local_matriz = LocalEstoque.objects.create(
+        descricao='Local Matriz Vendas', empresa=matriz)
+    local_filial = LocalEstoque.objects.create(
+        descricao='Local Filial Vendas', empresa=filial)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=matriz)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=filial)
+    MinhaEmpresa.objects.filter(m_usuario=test_case.usuario).update(m_empresa=matriz)
+    return matriz, filial, cliente_matriz, local_matriz, local_filial
 
 
 class VendasAdicionarViewsTestCase(BaseTestCase):
@@ -85,8 +116,9 @@ class VendasAdicionarViewsTestCase(BaseTestCase):
         # Assert form invalido
         data['cliente'] = ''
         response = self.client.post(url, data, follow=True)
-        self.assertFormError(
-            response, 'form', 'cliente', 'Este campo é obrigatório.')
+        self.assertEqual(
+            response.context_data['form'].errors['cliente'],
+            ['Este campo é obrigatório.'])
 
     def test_add_pedido_venda_view_post_request(self):
         url = reverse('vendas:addpedidovendaview')
@@ -118,8 +150,9 @@ class VendasAdicionarViewsTestCase(BaseTestCase):
         # Assert form invalido
         data['cliente'] = ''
         response = self.client.post(url, data, follow=True)
-        self.assertFormError(
-            response, 'form', 'cliente', 'Este campo é obrigatório.')
+        self.assertEqual(
+            response.context_data['form'].errors['cliente'],
+            ['Este campo é obrigatório.'])
 
     def test_add_condicao_pagamento_view_post_request(self):
         url = reverse('vendas:addcondicaopagamentoview')
@@ -148,41 +181,47 @@ class VendasListarViewsTestCase(BaseTestCase):
 
     def test_list_orcamento_venda_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
-        obj = OrcamentoVenda.objects.create(cliente=cli)
+        obj = OrcamentoVenda.objects.create(
+            cliente=cli, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'vendas:listaorcamentovendaview'), deleted_object=obj)
 
     def test_list_orcamento_venda_vencido_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
         obj = OrcamentoVenda.objects.create(
-            cliente=cli, data_vencimento=datetime.now().date() - timedelta(days=1))
+            cliente=cli, empresa=self.empresa_ativa,
+            data_vencimento=datetime.now().date() - timedelta(days=1))
         self.check_list_view_delete(url=reverse(
             'vendas:listaorcamentovendavencidoview'), deleted_object=obj)
 
     def test_list_orcamento_venda_vence_hoje_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
         obj = OrcamentoVenda.objects.create(
-            cliente=cli, data_vencimento=datetime.now().date())
+            cliente=cli, empresa=self.empresa_ativa,
+            data_vencimento=datetime.now().date())
         self.check_list_view_delete(url=reverse(
             'vendas:listaorcamentovendahojeview'), deleted_object=obj)
 
     def test_list_pedido_venda_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
-        obj = PedidoVenda.objects.create(cliente=cli)
+        obj = PedidoVenda.objects.create(
+            cliente=cli, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'vendas:listapedidovendaview'), deleted_object=obj)
 
     def test_list_pedido_venda_atrasado_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
         obj = PedidoVenda.objects.create(
-            cliente=cli, data_entrega=datetime.now().date() - timedelta(days=1))
+            cliente=cli, empresa=self.empresa_ativa,
+            data_entrega=datetime.now().date() - timedelta(days=1))
         self.check_list_view_delete(url=reverse(
             'vendas:listapedidovendaatrasadosview'), deleted_object=obj)
 
     def test_list_pedido_venda_entrega_hoje_view_deletar_objeto(self):
         cli = Cliente.objects.order_by('id').last()
         obj = PedidoVenda.objects.create(
-            cliente=cli, data_entrega=datetime.now().date())
+            cliente=cli, empresa=self.empresa_ativa,
+            data_entrega=datetime.now().date())
         self.check_list_view_delete(url=reverse(
             'vendas:listapedidovendahojeview'), deleted_object=obj)
 
@@ -190,6 +229,68 @@ class VendasListarViewsTestCase(BaseTestCase):
         obj = CondicaoPagamento.objects.create(n_parcelas=6)
         self.check_list_view_delete(url=reverse(
             'vendas:listacondicaopagamentoview'), deleted_object=obj)
+
+    def test_list_pedido_venda_nao_exibe_outra_empresa(self):
+        cli = Cliente.objects.order_by('id').last()
+        outra_empresa = Empresa.objects.create(
+            nome_razao_social='Empresa Vendas', tipo_pessoa='PJ')
+        local_outra_empresa = LocalEstoque.objects.create(
+            descricao='Local Vendas Outra Empresa', empresa=outra_empresa)
+        pedido_outra_empresa = PedidoVenda.objects.create(
+            cliente=cli,
+            local_orig=local_outra_empresa,
+            empresa=outra_empresa)
+
+        response = self.client.get(reverse('vendas:listapedidovendaview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(pedido_outra_empresa in response.context['all_pedidos'])
+
+    def test_list_pedido_venda_modo_grupo_exibe_filial_para_matriz(self):
+        matriz, filial, cliente, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        pedido_filial = PedidoVenda.objects.create(
+            cliente=cliente,
+            local_orig=local_filial,
+            empresa=filial)
+
+        response = self.client.get(
+            reverse('vendas:listapedidovendaview'),
+            {'modo': 'grupo'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_venda'], 'grupo')
+        self.assertTrue(pedido_filial in response.context['all_pedidos'])
+        self.assertEqual(response.context['empresa_ativa'], matriz)
+
+    def test_list_orcamento_venda_modo_grupo_exibe_filial_para_matriz(self):
+        _matriz, filial, cliente, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        orcamento_filial = OrcamentoVenda.objects.create(
+            cliente=cliente,
+            local_orig=local_filial,
+            empresa=filial)
+
+        response = self.client.get(
+            reverse('vendas:listaorcamentovendaview'),
+            {'modo': 'grupo'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_venda'], 'grupo')
+        self.assertTrue(orcamento_filial in response.context['all_orcamentos'])
+
+    def test_list_pedido_venda_paginated(self):
+        cli = Cliente.objects.order_by('id').last()
+        for _indice in range(105):
+            PedidoVenda.objects.create(
+                cliente=cli,
+                empresa=self.empresa_ativa)
+
+        response = self.client.get(reverse('vendas:listapedidovendaview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(len(response.context['all_pedidos']), 100)
 
 
 class VendasEditarViewsTestCase(BaseTestCase):
@@ -260,6 +361,60 @@ class VendasAjaxRequestViewsTestCase(BaseTestCase):
         data = {'vendaId': obj_pk}
         self.check_json_response(url, data, obj_pk, model='vendas.pedidovenda')
 
+    def test_info_venda_nao_retorna_pedido_outra_empresa(self):
+        cli = Cliente.objects.order_by('id').last()
+        outra_empresa = Empresa.objects.create(
+            nome_razao_social='Empresa Ajax Vendas', tipo_pessoa='PJ')
+        local_outra_empresa = LocalEstoque.objects.create(
+            descricao='Local Ajax Vendas', empresa=outra_empresa)
+        pedido_outra_empresa = PedidoVenda.objects.create(
+            cliente=cli,
+            local_orig=local_outra_empresa,
+            empresa=outra_empresa)
+
+        response = self.client.post(
+            reverse('vendas:infovenda'),
+            {'vendaId': pedido_outra_empresa.pk},
+            follow=True)
+        self.assertEqual(response.status_code, 404)
+
+    def test_info_venda_retorna_cfop_da_empresa_ativa(self):
+        cliente = Cliente.objects.filter(
+            empresa_relacionada=self.empresa_ativa).order_by('id').last()
+        pedido = PedidoVenda.objects.create(
+            cliente=cliente,
+            local_orig=LocalEstoque.objects.get(pk=DEFAULT_LOCAL_ID),
+            empresa=self.empresa_ativa)
+        produto = Produto.objects.create(
+            codigo='VENDA-CFOP-1',
+            descricao='Produto Venda CFOP',
+            venda='100.00',
+        )
+        cfop_empresa = NaturezaOperacao.objects.create(
+            empresa=self.empresa_ativa, cfop='6108')
+        ProdutoEmpresa.objects.create(
+            produto=produto,
+            empresa=self.empresa_ativa,
+            venda='110.00',
+            cfop_padrao=cfop_empresa,
+        )
+        pedido.itens_venda.create(
+            produto=produto,
+            quantidade='1.00',
+            valor_unit='110.00',
+            subtotal='110.00',
+            desconto='0.00',
+            tipo_desconto='0',
+        )
+
+        response = self.client.post(reverse('vendas:infovenda'), {
+            'vendaId': pedido.pk,
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode('utf-8'))
+        item_payload = next(item for item in payload if item['model'] == 'vendas.itensvenda')
+        self.assertEqual(item_payload['hidden_fields']['cfop'], '6108')
+
 
 class VendasAcoesUsuarioViewsTestCase(BaseTestCase):
 
@@ -284,7 +439,8 @@ class VendasAcoesUsuarioViewsTestCase(BaseTestCase):
     def test_gerar_pedido_venda(self):
         # Criar novo orcamento e gerar pedido
         cli = Cliente.objects.order_by('id').last()
-        obj = OrcamentoVenda.objects.create(cliente=cli)
+        obj = OrcamentoVenda.objects.create(
+            cliente=cli, empresa=self.empresa_ativa)
         url = reverse('vendas:gerarpedidovenda',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url, follow=True)

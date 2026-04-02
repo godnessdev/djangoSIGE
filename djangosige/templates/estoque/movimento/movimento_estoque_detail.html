@@ -130,12 +130,45 @@
                     {% if object.local_estoque_orig %}
                     <div class="col-sm-6">
                       <div class="form-group">
+                        <div class="form-line">
+                          <label>Empresa de origem</label>
+                          <span class="form-control">{{object.empresa}}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+
+                    {% if object.empresa_destino %}
+                    <div class="col-sm-6">
+                      <div class="form-group">
+                        <div class="form-line">
+                          <label>Empresa de destino</label>
+                          <span class="form-control">{{object.empresa_destino}}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+
+                    {% if object.local_estoque_orig %}
+                    <div class="col-sm-6">
+                      <div class="form-group">
                         <label>Local de origem</label>
                         <div class="input-group" style="margin-bottom: 0px;">
                           <div class="form-line">
                             <span class="form-control">{{object.local_estoque_orig}}</span>
                           </div>
                           <a class="input-group-addon popup" title="Editar {{object.local_estoque_orig}}" href="{% url 'estoque:editarlocalview' object.local_estoque_orig.id %}"><i class="material-icons add-new-icon" style="color: #248fbf;" title="Editar {{object.local_estoque_orig}}">&#xE8B6;</i></a>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+
+                    {% if object.impacto_custo %}
+                    <div class="col-sm-6">
+                      <div class="form-group">
+                        <div class="form-line">
+                          <label>Impacto no custo</label>
+                          <span class="form-control">{{object.get_impacto_custo_display}}</span>
                         </div>
                       </div>
                     </div>

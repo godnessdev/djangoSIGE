@@ -176,6 +176,9 @@ TIPO_IPI = (
 
 
 class GrupoFiscal(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='grupos_fiscais',
+        on_delete=models.CASCADE, null=True, blank=True)
     descricao = models.CharField(max_length=255)
     regime_trib = models.CharField(max_length=1, choices=REGIME_TRIB_ESCOLHAS)
 

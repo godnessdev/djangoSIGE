@@ -28,7 +28,7 @@
            {% include 'base/search.html' %}
 
            <div class="table-responsive">
-            <table id="lista-database" class="table table-bordered table-striped lista-table">
+            <table id="lista-database" class="table table-bordered table-striped lista-table"{% if server_paginated_list %} data-server-pagination="true"{% endif %}>
               <thead>
                 <tr>
                   <th>Código</th>                   
@@ -56,6 +56,8 @@
             </tbody>
           </table>
         </div>
+
+        {% include 'base/pagination.html' %}
 
       </div>
 

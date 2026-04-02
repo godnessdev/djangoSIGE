@@ -1,25 +1,36 @@
 {%extends 'base/base.html'%}
 
-{%block title%}Permissões do usuário{%endblock%}
+{%block title%}Permissoes do usuario{%endblock%}
 {%block content%}
 <section class="content">
   <div class="container-fluid block">
     <div class="block-header">
-      <h2>USUÁRIO</h2>
+      <h2>USUARIO</h2>
     </div>
     <div>
       <div class="card">
         <div class="header">
           <h2>
             <a href="{%url 'login:usuariodetailview' user.id %}"><i class="material-icons">&#xE5C4;</i></a>
-            <span><b>Usuário: </b>{{user.username}}{% if user.is_superuser %} (Admin){% endif %}</span>
+            <span><b>Usuario: </b>{{user.username}}{% if user.is_superuser %} (Admin){% endif %}</span>
           </h2>
         </div>
         <div class="body">
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <form action="" method="post">
               {% csrf_token %}
-                <select multiple="multiple"  id="id_select_permissoes" name="select_permissoes">
+                <div class="form-group" style="margin:15px;">
+                  <label for="id_perfil_usuario"><b>Perfil operacional</b></label>
+                  <select id="id_perfil_usuario" name="perfil_usuario" class="form-control" {% if user.is_superuser %}disabled{% endif %}>
+                    <option value="">Sem perfil especifico</option>
+                    {% for perfil in perfil_groups %}
+                    <option value="{{ perfil.name }}" {% if perfil.name == perfil_usuario_atual %}selected{% endif %}>
+                      {{ perfil.label }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <select multiple="multiple" id="id_select_permissoes" name="select_permissoes">
                   {% for default_perm in default_permissions %}
                   <optgroup label='{{default_perm.content_type.app_label|title}}'>
                     <option value='{{default_perm.codename}}' {% if default_perm in user.user_permissions.all or user.is_superuser %}selected{% endif %} {% if user.is_superuser %}disabled='disabled'{% endif %}>
@@ -43,6 +54,13 @@
                   </optgroup>
                   {% endfor %}
                 </select>
+                <select multiple="multiple" id="id_select_empresas" name="empresas">
+                  {% for empresa in usuario_empresa_form.fields.empresas.queryset %}
+                  <option value='{{empresa.pk}}' {% if empresa.pk in usuario_empresa_form.initial.empresas or user.is_superuser %}selected{% endif %} {% if user.is_superuser %}disabled='disabled'{% endif %}>
+                    {{empresa.nome_razao_social}}{% if empresa.tipo_empresa %} ({{ empresa.get_tipo_empresa_display }}){% endif %}
+                  </option>
+                  {% endfor %}
+                </select>
                 {% if not user.is_superuser %}
                 <button class="btn btn-success" style="margin:15px;float:right;" type="submit"><i class="material-icons">&#xE148;</i><span> SALVAR</span></button>
                 {% endif %}
@@ -52,7 +70,6 @@
       </div>
     </div>
 
-    
   </div>
 </section>
 
@@ -60,22 +77,25 @@
 {%endblock%}
 
 {% block js %}
-    
+
   {% load static %}
-  <!-- Multiselect JS -->
   <script src="{% static 'js/jquery.multi-select.js' %}"></script>
   <link href="{% static 'css/multi-select.css' %}" media="screen" rel="stylesheet" type="text/css">
 
   {% include 'base/load_jqueryui.html' %}
-
   {% include 'base/tooltip_js.html' %}
 
   <script type="text/javascript">
       $('#id_select_permissoes').multiSelect({
-      selectableHeader: "<div class='custom-ms-header'>Permissões disponíveis<i class='material-icons' title='Esta é a lista de permissões do usuário disponíveis. Você pode escolhê-los(as) selecionando-os(as) abaixo.'>&#xE887;</i></div>",
-      selectionHeader: "<div class='custom-ms-header'>Permissões do usuário {{user.username}}<i class='material-icons' title='Esta é a lista de permissões do usuário disponíveis. Você pode removê-los(as) selecionando-os(as) abaixo.'>&#xE887;</i></div>",
+      selectableHeader: "<div class='custom-ms-header'>Permissoes disponiveis</div>",
+      selectionHeader: "<div class='custom-ms-header'>Permissoes do usuario {{user.username}}</div>",
       selectableFooter: "<div class='custom-ms-footer'><a href='#' id='select-all'>selecionar todas</a></div>",
       selectionFooter: "<div class='custom-ms-footer'><a href='#' id='deselect-all'>remover todas</a></div>"});
+      $('#id_select_empresas').multiSelect({
+      selectableHeader: "<div class='custom-ms-header'>Empresas disponiveis</div>",
+      selectionHeader: "<div class='custom-ms-header'>Empresas permitidas</div>",
+      selectableFooter: "<div class='custom-ms-footer'><a href='#' id='select-all-empresas'>selecionar todas</a></div>",
+      selectionFooter: "<div class='custom-ms-footer'><a href='#' id='deselect-all-empresas'>remover todas</a></div>"});
       $('#select-all').click(function(){
       $('#id_select_permissoes').multiSelect('select_all');
         return false;
@@ -84,6 +104,14 @@
         $('#id_select_permissoes').multiSelect('deselect_all');
         return false;
       });
+      $('#select-all-empresas').click(function(){
+      $('#id_select_empresas').multiSelect('select_all');
+        return false;
+      });
+      $('#deselect-all-empresas').click(function(){
+        $('#id_select_empresas').multiSelect('deselect_all');
+        return false;
+      });
   </script>
-  
+
 {% endblock %}

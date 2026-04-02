@@ -5,6 +5,7 @@
         <th>#ID</th>                   
         <th>Descrição</th>
         <th>Tipo</th>
+        <th>Empresa</th>
         <th>Grupo</th>
         <th title="pagamento/vencimento">Data</th>
         <th>Status</th>
@@ -17,10 +18,11 @@
     <tbody>
      {% if all_lancamentos %}
      {% for lancamento in all_lancamentos %}
-     <tr class="clickable-row" data-href="{{lancamento.get_edit_url}}">
+     <tr{% if empresa_ativa and lancamento.empresa_id == empresa_ativa.id %} class="clickable-row" data-href="{{lancamento.get_edit_url}}"{% endif %}>
       <td>{{lancamento.id}}</td>
       <td>{{lancamento.descricao}}</td>
       <td>{{lancamento.get_tipo}}</td>
+      <td>{{lancamento.empresa|default_if_none:""}}</td>
       <td>{{lancamento.classificacao|default_if_none:""}}</td>
       <td>{% if lancamento.data_pagamento %}{{lancamento.format_data_pagamento}}{% elif lancamento.data_vencimento %}{{lancamento.format_data_vencimento}}{% endif %}</td>
       <td>{% if lancamento.status %}{{lancamento.get_status_display}}{% endif %}</td>

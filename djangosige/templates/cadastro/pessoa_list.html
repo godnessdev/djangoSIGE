@@ -25,6 +25,10 @@
 
           <div class="body">
 
+           {% if tipo_pessoa == 'empresa' %}
+           {% include 'cadastro/empresa/empresa_filters.html' %}
+           {% endif %}
+
            {% include 'base/search.html' %}
 
            {% if tipo_pessoa == 'cliente' %}
@@ -33,11 +37,13 @@
            {% include 'cadastro/empresa/empresa_list_table.html' %}
            {% elif tipo_pessoa == 'fornecedor' %}
            {% include 'cadastro/fornecedor/fornecedor_list_table.html' %}
-           {% elif tipo_pessoa == 'transportadora' %}
+        {% elif tipo_pessoa == 'transportadora' %}
            {% include 'cadastro/transportadora/transportadora_list_table.html' %}
            {% else %}
            Nenhum registro encontrado
            {% endif %}
+
+           {% include 'base/pagination.html' %}
 
         </div>
 

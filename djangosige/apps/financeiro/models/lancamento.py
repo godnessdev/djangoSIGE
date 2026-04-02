@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.urls import reverse_lazy
 from django.template.defaultfilters import date
@@ -23,6 +24,9 @@ STATUS_CONTA_ENTRADA_ESCOLHAS = (
 
 
 class Lancamento(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name="lancamentos_financeiros",
+        on_delete=models.CASCADE, null=True, blank=True)
     data_vencimento = models.DateField(null=True, blank=True)
     data_pagamento = models.DateField(null=True, blank=True)
     descricao = models.CharField(max_length=255)
@@ -42,6 +46,17 @@ class Lancamento(models.Model):
 
     class Meta:
         verbose_name = "Lançamento"
+
+    def clean(self):
+        errors = {}
+        if self.empresa and self.conta_corrente and self.conta_corrente.pessoa_banco_id != self.empresa_id:
+            errors['conta_corrente'] = 'A conta corrente precisa pertencer a empresa ativa.'
+        if self.empresa and self.movimento_caixa and self.movimento_caixa.empresa_id != self.empresa_id:
+            errors['movimento_caixa'] = 'O movimento de caixa precisa pertencer a empresa ativa.'
+        if self.empresa and hasattr(self, 'grupo_plano') and self.grupo_plano and self.grupo_plano.empresa_id != self.empresa_id:
+            errors['grupo_plano'] = 'O grupo do plano de contas precisa pertencer a empresa ativa.'
+        if errors:
+            raise ValidationError(errors)
 
     def format_valor_liquido(self):
         return locale.format(u'%.2f', self.valor_liquido, 1)
@@ -92,6 +107,9 @@ class Saida(Lancamento):
 
 
 class MovimentoCaixa(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name="movimentos_caixa",
+        on_delete=models.CASCADE, null=True, blank=True)
     data_movimento = models.DateField(null=True, blank=True)
     saldo_inicial = models.DecimalField(
         max_digits=13, decimal_places=2, default=Decimal('0.00'))

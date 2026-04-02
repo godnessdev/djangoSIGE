@@ -5,6 +5,7 @@
         <th>#ID</th>                   
         <th>Descrição</th>
         <th>Vencimento</th>
+        <th>Empresa</th>
         <th>Grupo</th>
         <th>Fornecedor</th>
         <th>Valor líquido</th>
@@ -16,14 +17,15 @@
     <tbody>
      {% if all_contaspagar%}
      {% for conta in all_contaspagar %}
-     <tr class="clickable-row" data-href="{% url 'financeiro:editarcontapagarview' conta.id %}">
+     <tr{% if empresa_ativa and conta.empresa_id == empresa_ativa.id %} class="clickable-row" data-href="{% url 'financeiro:editarcontapagarview' conta.id %}"{% endif %}>
       <td>{{conta.id}}</td>
       <td>{{conta.descricao}}</td>
       <td>{{conta.format_data_vencimento|default_if_none:""}}</td>
+      <td>{{conta.empresa|default_if_none:""}}</td>
       <td>{{conta.classificacao|default_if_none:""}}</td>
       <td>{{conta.fornecedor|default_if_none:""}}</td>
       <td>{{conta.format_valor_liquido}}</td>
-      <td class="green_td" style="text-align:center;padding:0px;height:100%;"><a href="javascript:void(0);" class="prevent-click-row" id="pagar_conta" style="color:green;height:100%;width:100%;display:block;"><i class="material-icons" style="margin-top:8px;">&#xE227;</i></a></td>
+      <td class="green_td" style="text-align:center;padding:0px;height:100%;">{% if empresa_ativa and conta.empresa_id == empresa_ativa.id %}<a href="javascript:void(0);" class="prevent-click-row" id="pagar_conta" style="color:green;height:100%;width:100%;display:block;"><i class="material-icons" style="margin-top:8px;">&#xE227;</i></a>{% endif %}</td>
       <td class="lista-remove">
         <input type="checkbox" name="{{conta.id}}" id="remover-entrada-{{conta.id}}"/>
         <label class="remove-entry-label" for="remover-entrada-{{conta.id}}"></label>

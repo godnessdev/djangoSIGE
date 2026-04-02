@@ -7,7 +7,7 @@ from django.views.generic.edit import UpdateView
 
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, Group
 
 from django.db import DatabaseError
 from django.db.models.query_utils import Q
@@ -27,8 +27,8 @@ from .forms import UserLoginForm, UserRegistrationForm, PasswordResetForm, SetPa
 from .models import Usuario
 from djangosige.configs.settings import DEFAULT_FROM_EMAIL
 
-from djangosige.apps.cadastro.forms import MinhaEmpresaForm
-from djangosige.apps.cadastro.models import MinhaEmpresa
+from djangosige.apps.cadastro.forms import MinhaEmpresaForm, UsuarioEmpresaForm
+from djangosige.apps.cadastro.models import MinhaEmpresa, UsuarioEmpresa
 
 import operator
 from functools import reduce
@@ -40,6 +40,50 @@ DEFAULT_PERMISSION_MODELS = ['cliente', 'fornecedor', 'produto',
 
 CUSTOM_PERMISSIONS = ['configurar_nfe', 'emitir_notafiscal', 'cancelar_notafiscal', 'gerar_danfe', 'consultar_cadastro', 'inutilizar_notafiscal', 'consultar_notafiscal',
                       'baixar_notafiscal', 'manifestacao_destinatario', 'faturar_pedidovenda', 'faturar_pedidocompra', 'acesso_fluxodecaixa', 'consultar_estoque', ]
+
+PERFIL_GROUPS = (
+    ('gestor_matriz', 'Gestor da matriz'),
+    ('gestor_filial', 'Gestor da filial'),
+    ('operador_filial', 'Operador da filial'),
+    ('auditoria_retaguarda', 'Auditoria/retaguarda'),
+)
+
+
+def ensure_profile_groups():
+    grupos = []
+    for name, label in PERFIL_GROUPS:
+        grupo, _ = Group.objects.get_or_create(name=name)
+        grupos.append({'name': grupo.name, 'label': label})
+    return grupos
+
+
+def sync_usuario_empresas_permitidas(usuario, empresas):
+    empresas = list(empresas)
+    UsuarioEmpresa.objects.filter(m_usuario=usuario).exclude(
+        m_empresa__in=empresas).delete()
+
+    existentes = set(UsuarioEmpresa.objects.filter(
+        m_usuario=usuario).values_list('m_empresa_id', flat=True))
+    for empresa in empresas:
+        if empresa.pk not in existentes:
+            UsuarioEmpresa.objects.create(m_usuario=usuario, m_empresa=empresa)
+
+    try:
+        minha_empresa = MinhaEmpresa.objects.get(m_usuario=usuario)
+    except MinhaEmpresa.DoesNotExist:
+        minha_empresa = None
+
+    if usuario.user.is_superuser:
+        return
+
+    if minha_empresa and minha_empresa.m_empresa and minha_empresa.m_empresa not in empresas:
+        if empresas:
+            minha_empresa.m_empresa = empresas[0]
+            minha_empresa.save()
+        else:
+            minha_empresa.delete()
+    elif not minha_empresa and empresas:
+        MinhaEmpresa.objects.create(m_usuario=usuario, m_empresa=empresas[0])
 
 
 class UserFormView(View):
@@ -239,14 +283,15 @@ class EditarPerfilView(UpdateView):
         super(EditarPerfilView, self).get(request, *args, **kwargs)
         form_class = self.get_form_class()
         form = self.get_form(form_class)
+        usuario = self.object
 
         try:
             empresa_instance = MinhaEmpresa.objects.get(
                 m_usuario=self.object.id)
             minha_empresa_form = MinhaEmpresaForm(
-                instance=empresa_instance, prefix='m_empresa_form')
+                instance=empresa_instance, prefix='m_empresa_form', usuario=usuario)
         except MinhaEmpresa.DoesNotExist:
-            minha_empresa_form = MinhaEmpresaForm(prefix='m_empresa_form')
+            minha_empresa_form = MinhaEmpresaForm(prefix='m_empresa_form', usuario=usuario)
 
         return self.render_to_response(self.get_context_data(form=form, minha_empresa_form=minha_empresa_form, object=self.object))
 
@@ -264,10 +309,10 @@ class EditarPerfilView(UpdateView):
             empresa_instance = MinhaEmpresa.objects.get(
                 m_usuario=self.object.id)
             minha_empresa_form = MinhaEmpresaForm(
-                request.POST, prefix='m_empresa_form', instance=empresa_instance)
+                request.POST, prefix='m_empresa_form', instance=empresa_instance, usuario=self.object)
         except MinhaEmpresa.DoesNotExist:
             minha_empresa_form = MinhaEmpresaForm(
-                request.POST, prefix='m_empresa_form', instance=None)
+                request.POST, prefix='m_empresa_form', instance=None, usuario=self.object)
 
         user = User.objects.get(pk=request.user.id)
 
@@ -310,33 +355,29 @@ class SelecionarMinhaEmpresaView(FormView):
     def get_form(self, form_class):
         try:
             usuario = Usuario.objects.get(user=self.request.user)
-            return form_class(instance=usuario, **self.get_form_kwargs())
+            return form_class(usuario=usuario, **self.get_form_kwargs())
         except Usuario.DoesNotExist:
             return form_class(**self.get_form_kwargs())
 
     def get(self, request):
+        usuario = Usuario.objects.get_or_create(user=self.request.user)[0]
         try:
-            usuario = Usuario.objects.get(user=self.request.user)
             empresa_instance = MinhaEmpresa.objects.get(m_usuario=usuario.id)
-            form = MinhaEmpresaForm(instance=empresa_instance)
+            form = MinhaEmpresaForm(instance=empresa_instance, usuario=usuario)
         except MinhaEmpresa.DoesNotExist:
-            form = MinhaEmpresaForm()
-        except Usuario.DoesNotExist:
-            usuario = Usuario.objects.get_or_create(user=self.request.user)[0]
-            form = MinhaEmpresaForm()
+            form = MinhaEmpresaForm(usuario=usuario)
 
         return render(request, self.template_name, {'form': form})
 
     def post(self, request):
+        usuario = Usuario.objects.get_or_create(user=self.request.user)[0]
         try:
-            usuario = Usuario.objects.get(user=self.request.user)
             empresa_instance = MinhaEmpresa.objects.get(m_usuario=usuario.id)
-            form = MinhaEmpresaForm(request.POST, instance=empresa_instance)
+            form = MinhaEmpresaForm(request.POST, instance=empresa_instance, usuario=usuario)
         except MinhaEmpresa.DoesNotExist:
-            form = MinhaEmpresaForm(request.POST, instance=None)
+            form = MinhaEmpresaForm(request.POST, instance=None, usuario=usuario)
 
         if form.is_valid():
-            usuario = Usuario.objects.get(user=request.user)
             minha_empresa = form.save(commit=False)
             minha_empresa.m_usuario = usuario
             minha_empresa.save()
@@ -373,8 +414,15 @@ class UsuarioDetailView(SuperUserRequiredMixin, TemplateView):
         context = super(UsuarioDetailView, self).get_context_data(**kwargs)
         try:
             usr = User.objects.get(pk=self.kwargs['pk'])
+            usuario = Usuario.objects.get(user=usr)
             context['user_match'] = usr
-            context['user_foto'] = Usuario.objects.get(user=usr).user_foto
+            context['user_foto'] = usuario.user_foto
+            context['empresas_permitidas'] = UsuarioEmpresa.objects.filter(
+                m_usuario=usuario).select_related('m_empresa')
+            context['empresa_ativa_usuario'] = MinhaEmpresa.objects.filter(
+                m_usuario=usuario).select_related('m_empresa').first()
+            context['perfis_usuario'] = usr.groups.filter(
+                name__in=[group_name for group_name, _label in PERFIL_GROUPS])
         except:
             pass
         return context
@@ -392,23 +440,40 @@ class EditarPermissoesUsuarioView(SuperUserRequiredMixin, TemplateView):
         context = super(EditarPermissoesUsuarioView,
                         self).get_context_data(**kwargs)
         user = User.objects.get(pk=self.kwargs['pk'])
+        usuario = Usuario.objects.get_or_create(user=user)[0]
         context['user'] = user
+        context['usuario_empresa_form'] = UsuarioEmpresaForm(usuario=usuario)
         condition = reduce(operator.or_, [Q(codename__icontains=s) for s in [
                            'add_', 'change_', 'view_', 'delete_']])
         context['default_permissions'] = Permission.objects.filter(
             condition, content_type__model__in=DEFAULT_PERMISSION_MODELS)
         context['custom_permissions'] = Permission.objects.filter(
             codename__in=CUSTOM_PERMISSIONS)
+        context['perfil_groups'] = ensure_profile_groups()
+        context['perfil_usuario_atual'] = user.groups.filter(
+            name__in=[group_name for group_name, _label in PERFIL_GROUPS]
+        ).values_list('name', flat=True).first()
         return context
 
     def post(self, request, *args, **kwargs):
         user = User.objects.get(pk=self.kwargs['pk'])
+        usuario = Usuario.objects.get_or_create(user=user)[0]
+        usuario_empresa_form = UsuarioEmpresaForm(request.POST, usuario=usuario)
         if not user.is_superuser:
+            ensure_profile_groups()
             user.user_permissions.clear()
             for nova_permissao_codename in request.POST.getlist('select_permissoes'):
                 nova_permissao = Permission.objects.get(
                     codename=nova_permissao_codename)
                 user.user_permissions.add(nova_permissao)
+            selected_profile = request.POST.get('perfil_usuario')
+            profile_group_names = [group_name for group_name, _label in PERFIL_GROUPS]
+            user.groups.remove(*Group.objects.filter(name__in=profile_group_names))
+            if selected_profile in profile_group_names:
+                user.groups.add(Group.objects.get_or_create(name=selected_profile)[0])
+            if usuario_empresa_form.is_valid():
+                sync_usuario_empresas_permitidas(
+                    usuario, usuario_empresa_form.cleaned_data['empresas'])
         messages.success(
             self.request, 'Permissões do usuário <b>{0}</b> atualizadas com sucesso.'.format(user.username))
         return redirect(reverse_lazy('login:usuariodetailview', kwargs={'pk': self.kwargs['pk']}))

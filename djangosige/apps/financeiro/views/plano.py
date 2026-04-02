@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 
 from djangosige.apps.base.custom_views import CustomCreateView, CustomUpdateView, CustomTemplateView
 
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 from djangosige.apps.financeiro.models import PlanoContasGrupo, PlanoContasSubgrupo
 from djangosige.apps.financeiro.forms import PlanoContasGrupoForm, PlanoContasSubgrupoFormSet
 
@@ -14,12 +15,18 @@ class PlanoContasView(CustomTemplateView):
     success_url = reverse_lazy('financeiro:planocontasview')
     permission_codename = 'view_planocontasgrupo'
 
+    def get_planos_queryset(self):
+        empresa = get_empresa_ativa(self.request.user)
+        if empresa is None:
+            return PlanoContasGrupo.objects.none()
+        return PlanoContasGrupo.objects.filter(empresa=empresa)
+
     def get_context_data(self, **kwargs):
         context = super(PlanoContasView, self).get_context_data(**kwargs)
         grupo_entrada = []
         grupo_saida = []
 
-        for grupo in PlanoContasGrupo.objects.all():
+        for grupo in self.get_planos_queryset():
             if grupo.tipo_grupo == '0' and '.' not in grupo.codigo:
                 grupo_entrada.append(grupo)
             elif grupo.tipo_grupo == '1' and '.' not in grupo.codigo:
@@ -32,17 +39,18 @@ class PlanoContasView(CustomTemplateView):
     # Remover items selecionados da database
     def post(self, request, *args, **kwargs):
         if self.check_user_delete_permission(request, PlanoContasGrupo):
+            queryset = self.get_planos_queryset()
             for key, value in request.POST.items():
                 if value == 'on':
                     grupo = None
                     subgrupo = False
                     tipo = None
                     try:
-                        instance = PlanoContasSubgrupo.objects.get(id=key)
+                        instance = PlanoContasSubgrupo.objects.get(id=key, empresa=get_empresa_ativa(request.user))
                         grupo = instance.grupo
                         subgrupo = True
                     except PlanoContasGrupo.DoesNotExist:
-                        instance = PlanoContasGrupo.objects.get(id=key)
+                        instance = queryset.get(id=key)
                         grupo = instance
 
                     tipo = instance.tipo_grupo
@@ -50,20 +58,20 @@ class PlanoContasView(CustomTemplateView):
 
                     # Reordenar codigos dos subgrupos
                     if grupo and subgrupo:
-                        for i, obj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=grupo), start=1):
+                        for i, obj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=grupo, empresa=grupo.empresa), start=1):
                             obj.codigo = str(grupo.codigo) + '.' + str(i)
                             obj.save()
                     # Reordenar codigos dos grupos e subgrupos
                     else:
                         id_list = []
-                        for g in PlanoContasGrupo.objects.filter(tipo_grupo=tipo):
-                            if not PlanoContasSubgrupo.objects.filter(id=g.id).count():
+                        for g in queryset.filter(tipo_grupo=tipo):
+                            if not PlanoContasSubgrupo.objects.filter(id=g.id, empresa=g.empresa).count():
                                 id_list.append(g.id)
 
-                        for i, obj in enumerate(PlanoContasGrupo.objects.filter(pk__in=id_list), start=1):
+                        for i, obj in enumerate(queryset.filter(pk__in=id_list), start=1):
                             obj.codigo = str(i)
                             obj.save()
-                            for j, subobj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=obj), start=1):
+                            for j, subobj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=obj, empresa=obj.empresa), start=1):
                                 subobj.codigo = str(obj.codigo) + '.' + str(j)
                                 subobj.save()
 
@@ -97,11 +105,16 @@ class AdicionarGrupoPlanoContasView(CustomCreateView):
             request.POST, prefix='subgrupo_form')
 
         if (form.is_valid() and subgrupo_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form, subgrupo_form=subgrupo_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
             n_subgrupos = PlanoContasSubgrupo.objects.filter(
-                tipo_grupo=self.object.tipo_grupo).count()
+                tipo_grupo=self.object.tipo_grupo, empresa=empresa).count()
             n_grupos = PlanoContasGrupo.objects.filter(
-                tipo_grupo=self.object.tipo_grupo).count()
+                tipo_grupo=self.object.tipo_grupo, empresa=empresa).count()
 
             self.object.codigo = n_grupos - n_subgrupos + 1
             self.object.save()
@@ -112,6 +125,7 @@ class AdicionarGrupoPlanoContasView(CustomCreateView):
             for i, obj in enumerate(objs, start=1):
                 obj.codigo = str(self.object.codigo) + '.' + str(i)
                 obj.tipo_grupo = self.object.tipo_grupo
+                obj.empresa = empresa
                 obj.save()
 
             return self.form_valid(form)
@@ -129,6 +143,12 @@ class EditarGrupoPlanoContasView(CustomUpdateView):
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, descricao=self.object.descricao)
+
+    def get_queryset(self):
+        empresa = get_empresa_ativa(self.request.user)
+        if empresa is None:
+            return PlanoContasGrupo.objects.none()
+        return PlanoContasGrupo.objects.filter(empresa=empresa)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -159,9 +179,10 @@ class EditarGrupoPlanoContasView(CustomUpdateView):
             subgrupo_form.instance = self.object
             subgrupo_form.save()
 
-            for i, obj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=self.object), start=1):
+            for i, obj in enumerate(PlanoContasSubgrupo.objects.filter(grupo=self.object, empresa=self.object.empresa), start=1):
                 obj.codigo = str(self.object.codigo) + '.' + str(i)
                 obj.tipo_grupo = self.object.tipo_grupo
+                obj.empresa = self.object.empresa
                 obj.save()
 
             return self.form_valid(form)

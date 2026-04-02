@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django.urls import reverse_lazy
+from django.db.models import Q
 
 from djangosige.apps.cadastro.forms import EmpresaForm
 from djangosige.apps.cadastro.models import Empresa
@@ -43,7 +44,26 @@ class EmpresasListView(PessoasListView):
         context['title_complete'] = 'EMPRESAS CADASTRADAS'
         context['add_url'] = reverse_lazy('cadastro:addempresaview')
         context['tipo_pessoa'] = 'empresa'
+        context['tipo_empresa_filter'] = self.request.GET.get('tipo_empresa', '')
+        context['grupo_empresa_filter'] = self.request.GET.get('grupo_empresa', '')
+        context['grupos_empresariais'] = Empresa.objects.filter(
+            tipo_empresa=Empresa.TIPO_MATRIZ).order_by('nome_razao_social')
         return context
+
+    def get_queryset(self):
+        queryset = Empresa.objects.select_related('empresa_pai').order_by('nome_razao_social')
+        tipo_empresa = (self.request.GET.get('tipo_empresa') or '').strip()
+        grupo_empresa = (self.request.GET.get('grupo_empresa') or '').strip()
+
+        if tipo_empresa in {
+                Empresa.TIPO_MATRIZ, Empresa.TIPO_FILIAL, Empresa.TIPO_INDEPENDENTE}:
+            queryset = queryset.filter(tipo_empresa=tipo_empresa)
+
+        if grupo_empresa.isdigit():
+            queryset = queryset.filter(
+                Q(pk=grupo_empresa) | Q(empresa_pai_id=grupo_empresa))
+
+        return queryset
 
 
 class EditarEmpresaView(EditarPessoaView):
@@ -58,6 +78,8 @@ class EditarEmpresaView(EditarPessoaView):
         context = super(EditarEmpresaView, self).get_context_data(**kwargs)
         context['return_url'] = reverse_lazy('cadastro:listaempresasview')
         context['tipo_pessoa'] = 'empresa'
+        if self.object:
+            context['filiais_vinculadas'] = self.object.filiais.order_by('nome_razao_social')
         return context
 
     def get(self, request, *args, **kwargs):

@@ -3,8 +3,10 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from djangosige.apps.cadastro.models import Produto, Unidade, Marca, Categoria, Fornecedor
+from djangosige.apps.cadastro.models import Produto, ProdutoEmpresa, Unidade, Marca, Categoria, Fornecedor
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 from djangosige.apps.estoque.models import LocalEstoque
+from djangosige.apps.fiscal.models import GrupoFiscal, NaturezaOperacao
 
 from decimal import Decimal
 
@@ -18,16 +20,77 @@ class ProdutoForm(forms.ModelForm):
     # Estoque
     estoque_inicial = forms.DecimalField(max_digits=16, decimal_places=2, localize=True, widget=forms.TextInput(
         attrs={'class': 'form-control decimal-mask'}), label='Qtd. em estoque inicial', initial=Decimal('0.00'), required=False)
-    fornecedor = forms.ChoiceField(choices=[(None, '----------')], widget=forms.Select(
-        attrs={'class': 'form-control'}), label='Fornecedor', required=False)
+    fornecedor = forms.ModelChoiceField(queryset=Fornecedor.objects.none(), widget=forms.Select(
+        attrs={'class': 'form-control'}), label='Fornecedor', required=False, empty_label='----------')
     local_dest = forms.ModelChoiceField(queryset=LocalEstoque.objects.all(), widget=forms.Select(
         attrs={'class': 'form-control'}), empty_label=None, label='Localização do estoque de destino', required=False)
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(ProdutoForm, self).__init__(*args, **kwargs)
         self.fields['estoque_minimo'].localize = True
-        self.fields['fornecedor'].choices = list(self.fields['fornecedor'].choices) + [(
-            fornecedor.id, fornecedor) for fornecedor in Fornecedor.objects.all()]
+        self.empresa_ativa = get_empresa_ativa(self.user)
+        self.fields['cfop_padrao'].queryset = NaturezaOperacao.objects.none()
+        self.fields['grupo_fiscal'].queryset = GrupoFiscal.objects.none()
+        if self.empresa_ativa:
+            self.fields['fornecedor'].queryset = Fornecedor.objects.filter(
+                empresa_relacionada=self.empresa_ativa).order_by('nome_razao_social')
+            self.fields['local_dest'].queryset = LocalEstoque.objects.filter(
+                empresa=self.empresa_ativa)
+            self.fields['cfop_padrao'].queryset = NaturezaOperacao.objects.filter(
+                empresa=self.empresa_ativa).order_by('cfop', 'descricao')
+            self.fields['grupo_fiscal'].queryset = GrupoFiscal.objects.filter(
+                empresa=self.empresa_ativa).order_by('descricao')
+            if self.instance.pk:
+                self.fields['venda'].initial = self.instance.get_venda_empresa(
+                    self.empresa_ativa)
+                self.fields['custo'].initial = self.instance.get_custo_empresa(
+                    self.empresa_ativa)
+                self.fields['cfop_padrao'].initial = self.instance.get_cfop_padrao_obj(
+                    self.empresa_ativa)
+                self.fields['grupo_fiscal'].initial = self.instance.get_grupo_fiscal_empresa(
+                    self.empresa_ativa)
+
+    def save(self, commit=True):
+        produto_existente = None
+        if self.instance.pk:
+            produto_existente = Produto.objects.get(pk=self.instance.pk)
+
+        instance = super(ProdutoForm, self).save(commit=False)
+        venda = self.cleaned_data.get('venda')
+        custo = self.cleaned_data.get('custo')
+        cfop_padrao = self.cleaned_data.get('cfop_padrao')
+        grupo_fiscal = self.cleaned_data.get('grupo_fiscal')
+
+        if produto_existente and self.empresa_ativa:
+            instance.venda = produto_existente.venda
+            instance.custo = produto_existente.custo
+            instance.cfop_padrao = produto_existente.cfop_padrao
+            instance.grupo_fiscal = produto_existente.grupo_fiscal
+
+        if commit:
+            instance.save()
+            self.save_company_configuration(instance)
+            self.save_m2m()
+        return instance
+
+    def save_company_configuration(self, instance):
+        if not self.empresa_ativa or not instance.pk:
+            return
+
+        ProdutoEmpresa.objects.update_or_create(
+            produto=instance,
+            empresa=self.empresa_ativa,
+            defaults={
+                'venda': self.cleaned_data.get('venda'),
+                'custo': self.cleaned_data.get('custo'),
+                'cfop_padrao': self.cleaned_data.get('cfop_padrao'),
+                'grupo_fiscal': self.cleaned_data.get('grupo_fiscal'),
+            }
+        )
+        if hasattr(instance, '_configuracao_empresa_cache'):
+            instance._configuracao_empresa_cache[self.empresa_ativa.pk] = instance.configuracoes_empresa.filter(
+                empresa=self.empresa_ativa).first()
 
     class Meta:
         model = Produto

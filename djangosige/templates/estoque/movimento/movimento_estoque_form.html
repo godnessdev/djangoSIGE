@@ -111,6 +111,29 @@
         {% if form.local_estoque_orig %}
         <div class="col-sm-6">
           <div class="form-group">
+            <div class="form-line">
+              <label>Empresa de origem</label>
+              <input class="form-control" value="{{ user_empresa_ativa }}" readonly>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if form.empresa_destino %}
+        <div class="col-sm-6">
+          <div class="form-group">
+            <div class="form-line">
+              <label>{{form.empresa_destino.label}}</label>{% if form.empresa_destino.field.required %}<strong style="color:red;"> *</strong>{% endif %}
+              {% if form.empresa_destino.errors %}<label class="error">{% for error in form.empresa_destino.errors %}{{error}}{% endfor %}</label>{% endif %}
+              {{form.empresa_destino}}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if form.local_estoque_orig %}
+        <div class="col-sm-6">
+          <div class="form-group">
             <label>{{form.local_estoque_orig.label}}</label>{% if form.local_estoque_orig.field.required %}<strong style="color:red;"> *</strong>{% endif %}
             {% if form.local_estoque_orig.errors %}<label class="error">{% for error in form.local_estoque_orig.errors %}{{error}}{% endfor %}</label>{% endif %}
             <div class="input-group" style="margin-bottom: 0px;">
@@ -134,6 +157,19 @@
               </div>
               <a class="input-group-addon popup" style="color: green;" title="Adicionar local" href="{% url 'estoque:addlocalview' %}"><i class="material-icons add-new-icon" title="Adicionar local">&#xE147;</i></a>
             </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if form.impacto_custo %}
+        <div class="col-sm-6">
+          <div class="form-group">
+            <div class="form-line">
+              <label>{{form.impacto_custo.label}}</label>
+              {% if form.impacto_custo.errors %}<label class="error">{% for error in form.impacto_custo.errors %}{{error}}{% endfor %}</label>{% endif %}
+              {{form.impacto_custo}}
+            </div>
+            <small>A transferencia entre filiais nao recalcula o custo do produto neste MVP.</small>
           </div>
         </div>
         {% endif %}

@@ -3,6 +3,7 @@
 from django.urls import reverse_lazy
 
 from djangosige.apps.cadastro.forms import ClienteForm
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa
 from djangosige.apps.cadastro.models import Cliente
 
 from .base import AdicionarPessoaView, PessoasListView, EditarPessoaView
@@ -41,6 +42,7 @@ class ClientesListView(PessoasListView):
     context_object_name = 'all_clientes'
     success_url = reverse_lazy('cadastro:listaclientesview')
     permission_codename = 'view_cliente'
+    paginate_by = 100
 
     def get_context_data(self, **kwargs):
         context = super(ClientesListView, self).get_context_data(**kwargs)
@@ -48,6 +50,12 @@ class ClientesListView(PessoasListView):
         context['add_url'] = reverse_lazy('cadastro:addclienteview')
         context['tipo_pessoa'] = 'cliente'
         return context
+
+    def get_queryset(self):
+        queryset = Cliente.objects.select_related(
+            'pessoa_jur_info', 'pessoa_fis_info', 'endereco_padrao').order_by('-id')
+        return filtrar_queryset_por_empresa_ativa(
+            queryset, self.request.user, field_name='empresa_relacionada')
 
 
 class EditarClienteView(EditarPessoaView):
@@ -71,6 +79,10 @@ class EditarClienteView(EditarPessoaView):
         form = self.get_form(form_class)
 
         return super(EditarClienteView, self).get(request, form, *args, **kwargs)
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            Cliente.objects.all(), self.request.user, field_name='empresa_relacionada')
 
     def post(self, request, *args, **kwargs):
         req_post = request.POST.copy()

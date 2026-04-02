@@ -11,6 +11,26 @@
 <div class="col-sm-6">
   <div class="form-group">
     <div class="form-line">
+      <label>{{form.tipo_empresa.label}}</label>
+      {% if form.tipo_empresa.errors %}<label class="error">{% for error in form.tipo_empresa.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.tipo_empresa}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6" id="empresa-pai-wrapper" {% if form.tipo_empresa.value != 'FIL' %}style="display:none;"{% endif %}>
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.empresa_pai.label}}</label>
+      {% if form.empresa_pai.errors %}<label class="error">{% for error in form.empresa_pai.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.empresa_pai}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
       <label>{{pessoa_juridica_form.nome_fantasia.label}}</label>
       {% if pessoa_juridica_form.nome_fantasia.errors %}<label class="error">{% for error in pessoa_juridica_form.nome_fantasia.errors %}{{error}}{% endfor %}</label>{% endif %}
       {{pessoa_juridica_form.nome_fantasia}}
@@ -117,3 +137,18 @@
     </div>
   </div>
 </div>
+
+{% if object %}
+<div class="col-sm-12">
+  <div class="alert alert-info" style="margin-top: 10px;">
+    <strong>Estrutura atual:</strong>
+    {{ object.get_tipo_empresa_display }}
+    {% if object.matriz_vinculada %}
+    | Matriz: {{ object.matriz_vinculada.nome_razao_social }}
+    {% endif %}
+    {% if filiais_vinculadas %}
+    | Filiais: {% for filial in filiais_vinculadas %}{{ filial.nome_razao_social }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}

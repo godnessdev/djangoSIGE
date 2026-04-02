@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.template.defaultfilters import date
 from django.core.validators import MinValueValidator
 from django.urls import reverse_lazy
@@ -109,6 +110,12 @@ class ItensCompra(models.Model):
 
 
 class Compra(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='compras',
+        on_delete=models.CASCADE, null=True, blank=True)
+    empresa_destino = models.ForeignKey(
+        'cadastro.Empresa', related_name='compras_destinadas',
+        on_delete=models.CASCADE, null=True, blank=True)
     # Fornecedor
     fornecedor = models.ForeignKey(
         'cadastro.Fornecedor', related_name="compra_fornecedor", on_delete=models.CASCADE)
@@ -144,6 +151,31 @@ class Compra(models.Model):
     def get_total_sem_imposto(self):
         total_sem_imposto = self.valor_total - self.impostos
         return total_sem_imposto
+
+    def clean(self):
+        errors = {}
+        empresa_destino = self.empresa_destino or self.empresa
+
+        if (self.empresa and self.empresa_destino and
+                self.empresa_id != self.empresa_destino_id and
+                self.empresa.tipo_empresa != self.empresa.TIPO_MATRIZ):
+            errors['empresa_destino'] = (
+                'A compra centralizada para outra empresa so pode ser realizada pela matriz.'
+            )
+
+        if (self.empresa and empresa_destino and
+                not self.empresa.pertence_ao_mesmo_grupo(empresa_destino)):
+            errors['empresa_destino'] = (
+                'A empresa abastecida precisa pertencer ao mesmo grupo da empresa operadora.'
+            )
+
+        if self.local_dest and empresa_destino and self.local_dest.empresa_id != empresa_destino.id:
+            errors['local_dest'] = 'O local de destino precisa pertencer a empresa abastecida.'
+        if errors:
+            raise ValidationError(errors)
+
+    def get_empresa_abastecida(self):
+        return self.empresa_destino or self.empresa
 
     def get_total_produtos(self):
         itens = ItensCompra.objects.filter(compra_id=self.id)

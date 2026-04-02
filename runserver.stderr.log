@@ -1,0 +1,44 @@
+Watching for file changes with StatReloader
+[02/Apr/2026 16:40:43] "GET / HTTP/1.1" 302 0
+[02/Apr/2026 16:40:43] "GET /login/ HTTP/1.1" 200 5779
+[02/abr/2026 16:40:43,427] - Broken pipe from ('127.0.0.1', 63664)
+[02/Apr/2026 16:41:08] "GET / HTTP/1.1" 200 41245
+[02/Apr/2026 16:41:08] "GET /static/css/theme-overrides.css?v=20260402d HTTP/1.1" 304 0
+[02/Apr/2026 16:41:08] "GET /static/js/admin.js?v=20260402d HTTP/1.1" 304 0
+[02/Apr/2026 16:41:33] "GET /vendas/pedidovenda/listapedidovenda/ HTTP/1.1" 200 82729
+[02/abr/2026 16:41:34,517] - Broken pipe from ('127.0.0.1', 53352)
+[02/Apr/2026 16:41:38] "GET /vendas/orcamentovenda/listaorcamentovenda/ HTTP/1.1" 200 26483
+[02/Apr/2026 16:41:41] "GET /vendas/orcamentovenda/listaorcamentovenda/ HTTP/1.1" 200 26483
+[02/Apr/2026 16:41:47] "GET /fiscal/notafiscal/saida/listanotafiscal/ HTTP/1.1" 200 28326
+[02/abr/2026 16:42:09,298] - Broken pipe from ('127.0.0.1', 64953)
+[02/abr/2026 16:42:31,725] - Broken pipe from ('127.0.0.1', 56521)
+[02/Apr/2026 16:42:45] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 2152632
+[02/Apr/2026 16:42:45] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 304 0
+[02/abr/2026 16:44:13,739] - Broken pipe from ('127.0.0.1', 63206)
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\base\custom_views.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\cliente.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\fornecedor.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\produto.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\vendas\views\vendas.py changed, reloading.
+Watching for file changes with StatReloader
+[02/Apr/2026 16:48:04] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 68215
+[02/Apr/2026 16:48:07] "GET /cadastro/produto/listaprodutos/ HTTP/1.1" 200 74518
+[02/Apr/2026 16:48:08] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 68215
+[02/Apr/2026 16:48:21] "GET /cadastro/produto/listaprodutos/ HTTP/1.1" 200 74518
+[02/Apr/2026 16:48:25] "GET / HTTP/1.1" 200 41245
+[02/Apr/2026 16:48:29] "GET /financeiro/fluxodecaixa/ HTTP/1.1" 200 27353
+C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\produto.py changed, reloading.
+Watching for file changes with StatReloader
+[02/Apr/2026 16:48:33] "GET /financeiro/planodecontas/ HTTP/1.1" 200 27251
+[02/Apr/2026 16:48:39] "GET /financeiro/planodecontas/ HTTP/1.1" 200 27251
+[02/abr/2026 16:48:54,622] - Broken pipe from ('127.0.0.1', 59069)
+[02/Apr/2026 16:48:54] "GET /cadastro/empresa/editar/36/ HTTP/1.1" 200 57311
+[02/Apr/2026 16:48:54] "GET /static/tabelas/municipios/SP.csv HTTP/1.1" 200 13279
+[02/abr/2026 16:49:30,093] - Broken pipe from ('127.0.0.1', 58728)
+[02/abr/2026 16:49:38,978] - Broken pipe from ('127.0.0.1', 60078)
+[02/abr/2026 16:50:04,335] - Broken pipe from ('127.0.0.1', 60698)
+[02/abr/2026 16:50:05,593] - Broken pipe from ('127.0.0.1', 53877)

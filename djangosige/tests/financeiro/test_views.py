@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from djangosige.tests.test_case import BaseTestCase, replace_none_values_in_dictionary
+from django.contrib.auth.models import Group
+from djangosige.apps.cadastro.models import Empresa, MinhaEmpresa, UsuarioEmpresa
 from djangosige.apps.financeiro.models import MovimentoCaixa, Entrada, Saida, PlanoContasGrupo, PlanoContasSubgrupo
 from djangosige.apps.estoque.models import SaidaEstoque
 
@@ -25,6 +27,24 @@ SUBGRUPO_PLANO_CONTAS_FORMSET_DATA = {
 }
 
 
+def configurar_grupo_empresarial(test_case):
+    matriz = Empresa.objects.create(
+        nome_razao_social='Matriz Financeiro',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_MATRIZ)
+    filial = Empresa.objects.create(
+        nome_razao_social='Filial Financeiro',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_FILIAL,
+        empresa_pai=matriz)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=matriz)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=filial)
+    MinhaEmpresa.objects.filter(m_usuario=test_case.usuario).update(m_empresa=matriz)
+    return matriz, filial
+
+
 class FinanceiroFluxoCaixaViewTestCase(BaseTestCase):
     url = reverse('financeiro:fluxodecaixaview')
 
@@ -46,7 +66,9 @@ class FinanceiroFluxoCaixaViewTestCase(BaseTestCase):
         response = self.client.get(self.url, data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context['movimentos']), list(
-            MovimentoCaixa.objects.filter(data_movimento__range=(data_inicial, data_inicial))))
+            MovimentoCaixa.objects.filter(
+                empresa=self.empresa_ativa,
+                data_movimento__range=(data_inicial, data_inicial))))
 
     def test_fluxo_caixa_get_request_data_final(self):
         data_final = datetime.today()
@@ -56,7 +78,9 @@ class FinanceiroFluxoCaixaViewTestCase(BaseTestCase):
         response = self.client.get(self.url, data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context['movimentos']), list(
-            MovimentoCaixa.objects.filter(data_movimento__range=(data_final, data_final))))
+            MovimentoCaixa.objects.filter(
+                empresa=self.empresa_ativa,
+                data_movimento__range=(data_final, data_final))))
 
     def test_fluxo_caixa_get_request_datas_inicial_final(self):
         data_inicial = datetime.today()
@@ -68,7 +92,9 @@ class FinanceiroFluxoCaixaViewTestCase(BaseTestCase):
         response = self.client.get(self.url, data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context['movimentos']), list(
-            MovimentoCaixa.objects.filter(data_movimento__range=(data_inicial, data_final))))
+            MovimentoCaixa.objects.filter(
+                empresa=self.empresa_ativa,
+                data_movimento__range=(data_inicial, data_final))))
 
     def test_fluxo_caixa_get_request_data_formato_errado(self):
         data_inicial = datetime.today()
@@ -81,6 +107,23 @@ class FinanceiroFluxoCaixaViewTestCase(BaseTestCase):
         self.assertEqual(len(msgs), 1)
         self.assertEqual(
             str(msgs[0]), 'Formato de data incorreto, deve ser no formato DD/MM/AAAA')
+
+    def test_fluxo_caixa_consolidado_exibe_filial_para_matriz(self):
+        matriz, filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        MovimentoCaixa.objects.create(
+            empresa=filial,
+            data_movimento=datetime.today(),
+            entradas=Decimal('50.00'),
+            saldo_final=Decimal('50.00'))
+
+        response = self.client.get(self.url, {'modo': 'grupo'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_financeiro'], 'grupo')
+        self.assertTrue(
+            any(movimento.empresa_id == filial.id for movimento in response.context['movimentos']))
+        self.assertEqual(response.context['empresa_ativa'], matriz)
 
 
 class FinanceiroAdicionarViewsTestCase(BaseTestCase):
@@ -130,6 +173,21 @@ class FinanceiroAdicionarViewsTestCase(BaseTestCase):
         response = self.client.post(url, data, follow=True)
         self.assertFormError(
             response, 'form', 'descricao', 'Este campo é obrigatório.')
+
+    def test_add_grupo_view_vincula_empresa_ativa(self):
+        url = reverse('financeiro:addgrupoview')
+
+        data = {
+            'grupo_form-tipo_grupo': '0',
+            'grupo_form-descricao': 'Grupo Empresa Ativa',
+        }
+
+        data.update(SUBGRUPO_PLANO_CONTAS_FORMSET_DATA)
+
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        grupo = PlanoContasGrupo.objects.get(descricao='Grupo Empresa Ativa')
+        self.assertEqual(grupo.empresa, self.empresa_ativa)
 
     def test_add_conta_pagar_view_post_request(self):
         url = reverse('financeiro:addcontapagarview')
@@ -274,68 +332,123 @@ class FinanceiroPlanoContasViewsTestCase(BaseTestCase):
 
     def test_deletar_grupo_plano_contas(self):
         obj = PlanoContasGrupo.objects.create(
-            codigo='000001', tipo_grupo='0', descricao='Grupo Entrada Teste')
+            codigo='000001', tipo_grupo='0', descricao='Grupo Entrada Teste',
+            empresa=self.empresa_ativa)
         self.check_list_view_delete(
             url=self.url, deleted_object=obj, context_object_key='all_grupos_entrada')
 
     def test_deletar_subgrupo_plano_contas(self):
         grupo = PlanoContasGrupo.objects.filter(tipo_grupo='0')[0]
         PlanoContasSubgrupo.objects.create(
-            codigo='000010', tipo_grupo='0', descricao='Subgrupo Entrada Teste', grupo=grupo)
+            codigo='000010', tipo_grupo='0', descricao='Subgrupo Entrada Teste',
+            grupo=grupo, empresa=self.empresa_ativa)
         obj = PlanoContasGrupo.objects.get(
             codigo='000010', tipo_grupo='0', descricao='Subgrupo Entrada Teste')
         self.check_list_view_delete(
             url=self.url, deleted_object=obj, context_object_key='all_grupos_entrada')
 
+    def test_plano_contas_nao_exibe_grupo_de_outra_empresa(self):
+        outra_empresa = Empresa.objects.create(
+            nome_razao_social='Empresa Plano Externo', tipo_pessoa='PJ')
+        PlanoContasGrupo.objects.create(
+            codigo='999',
+            tipo_grupo='0',
+            descricao='Grupo Externo',
+            empresa=outra_empresa)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        descricoes = [grupo.descricao for grupo in response.context['all_grupos_entrada']]
+        self.assertNotIn('Grupo Externo', descricoes)
+
 
 class FinanceiroListarViewsTestCase(BaseTestCase):
 
+    def test_lista_financeira_nao_exibe_lancamentos_de_outra_empresa(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Filial Financeiro Teste', tipo_pessoa='PJ')
+        Saida.objects.create(
+            status='1', descricao='Conta externa', empresa=empresa_secundaria)
+
+        response = self.client.get(reverse('financeiro:listacontapagarview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.context['all_contaspagar'].filter(
+                empresa=empresa_secundaria).exists())
+
+    def test_lista_financeira_consolidada_exibe_filial_para_matriz(self):
+        matriz, filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        Saida.objects.create(
+            status='1',
+            descricao='Conta filial consolidada',
+            empresa=filial)
+
+        response = self.client.get(
+            reverse('financeiro:listacontapagarview'),
+            {'modo': 'grupo'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_financeiro'], 'grupo')
+        self.assertTrue(
+            response.context['all_contaspagar'].filter(
+                empresa=filial,
+                descricao='Conta filial consolidada').exists())
+        self.assertEqual(response.context['empresa_ativa'], matriz)
+
     def test_list_todos_lancamentos_view_deletar_objetos(self):
         url = reverse('financeiro:listalancamentoview')
-        obj = Entrada.objects.create()
+        obj = Entrada.objects.create(empresa=self.empresa_ativa)
         self.check_list_view_delete(url=url, deleted_object=obj)
-        obj = Saida.objects.create()
+        obj = Saida.objects.create(empresa=self.empresa_ativa)
         self.check_list_view_delete(url=url, deleted_object=obj)
 
     def test_list_conta_pagar_view_deletar_objeto(self):
-        obj = Saida.objects.create(status='1')
+        obj = Saida.objects.create(status='1', empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontapagarview'), deleted_object=obj)
 
     def test_list_conta_pagar_atrasada_view_deletar_objeto(self):
         obj = Saida.objects.create(
-            status='1', data_vencimento=datetime.today() - timedelta(days=1))
+            status='1', data_vencimento=datetime.today() - timedelta(days=1),
+            empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontapagaratrasadasview'), deleted_object=obj)
 
     def test_list_conta_pagar_hoje_view_deletar_objeto(self):
         obj = Saida.objects.create(
-            status='1', data_vencimento=datetime.today())
+            status='1', data_vencimento=datetime.today(),
+            empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontapagarhojeview'), deleted_object=obj)
 
     def test_list_conta_receber_view_deletar_objeto(self):
-        obj = Entrada.objects.create(status='1')
+        obj = Entrada.objects.create(status='1', empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontareceberview'), deleted_object=obj)
 
     def test_list_conta_receber_atrasada_view_deletar_objeto(self):
         obj = Entrada.objects.create(
-            status='1', data_vencimento=datetime.today() - timedelta(days=1))
+            status='1', data_vencimento=datetime.today() - timedelta(days=1),
+            empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontareceberatrasadasview'), deleted_object=obj)
 
     def test_list_conta_receber_hoje_view_deletar_objeto(self):
         obj = Entrada.objects.create(
-            status='1', data_vencimento=datetime.today())
+            status='1', data_vencimento=datetime.today(),
+            empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listacontareceberhojeview'), deleted_object=obj)
 
     def test_list_recebimento_view_deletar_objeto(self):
         novo_movimento = MovimentoCaixa(
+            empresa=self.empresa_ativa,
             data_movimento=datetime.today(), entradas=Decimal('120.00'))
         try:
             ultimo_mvmt = MovimentoCaixa.objects.filter(
+                empresa=self.empresa_ativa,
                 data_movimento__lt=novo_movimento.data_movimento).latest('data_movimento')
             novo_movimento.saldo_inicial = ultimo_mvmt.saldo_final
             novo_movimento.saldo_final = novo_movimento.saldo_inicial + \
@@ -346,7 +459,8 @@ class FinanceiroListarViewsTestCase(BaseTestCase):
 
         novo_movimento.save()
         obj = Entrada.objects.create(descricao='Nova Entrada Teste', status='0', valor_total=Decimal(
-            '120.00'), valor_liquido=Decimal('120.00'), movimentar_caixa=True, movimento_caixa=novo_movimento)
+            '120.00'), valor_liquido=Decimal('120.00'), movimentar_caixa=True,
+            movimento_caixa=novo_movimento, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listarecebimentosview'), deleted_object=obj)
 
@@ -356,9 +470,11 @@ class FinanceiroListarViewsTestCase(BaseTestCase):
 
     def test_list_pagamento_view_deletar_objeto(self):
         novo_movimento = MovimentoCaixa(
+            empresa=self.empresa_ativa,
             data_movimento=datetime.today(), saidas=Decimal('120.00'))
         try:
             ultimo_mvmt = MovimentoCaixa.objects.filter(
+                empresa=self.empresa_ativa,
                 data_movimento__lt=novo_movimento.data_movimento).latest('data_movimento')
             novo_movimento.saldo_inicial = ultimo_mvmt.saldo_final
             novo_movimento.saldo_final = novo_movimento.saldo_inicial - \
@@ -369,7 +485,8 @@ class FinanceiroListarViewsTestCase(BaseTestCase):
 
         novo_movimento.save()
         obj = Saida.objects.create(descricao='Nova Saida Teste', status='0', valor_total=Decimal(
-            '120.00'), valor_liquido=Decimal('120.00'), movimentar_caixa=True, movimento_caixa=novo_movimento)
+            '120.00'), valor_liquido=Decimal('120.00'), movimentar_caixa=True,
+            movimento_caixa=novo_movimento, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'financeiro:listapagamentosview'), deleted_object=obj)
 
@@ -579,7 +696,8 @@ class FinanceiroEditarViewsTestCase(BaseTestCase):
         data_pagamento_futura = datetime.strptime(
             '01/01/2099', "%d/%m/%Y").date()
         obj = Entrada.objects.create(status='0', movimentar_caixa=False, valor_total='120.00',
-                                     valor_liquido='120.00', data_pagamento=data_pagamento_futura)
+                                     valor_liquido='120.00', data_pagamento=data_pagamento_futura,
+                                     empresa=self.empresa_ativa)
         url = reverse('financeiro:editarrecebimentoview',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url)
@@ -750,7 +868,8 @@ class FinanceiroEditarViewsTestCase(BaseTestCase):
         data_pagamento_futura = datetime.strptime(
             '01/01/2020', "%d/%m/%Y").date()
         obj = Saida.objects.create(status='0', movimentar_caixa=False, valor_total='120.00',
-                                   valor_liquido='120.00', data_pagamento=data_pagamento_futura)
+                                   valor_liquido='120.00', data_pagamento=data_pagamento_futura,
+                                   empresa=self.empresa_ativa)
         url = reverse('financeiro:editarpagamentoview',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url)

@@ -146,7 +146,7 @@
                         </span>
                         <span class="topbar-user__meta">
                             <strong>{{ request.user.username }}</strong>
-                            <small>{% if user_empresa %}{{ user_empresa }}{% else %}Conta ativa{% endif %}</small>
+                            <small>{% if user_empresa %}{{ user_empresa }}{% if user_empresa.tipo_empresa %} | {{ user_empresa.get_tipo_empresa_display }}{% endif %}{% else %}Conta ativa{% endif %}</small>
                         </span>
                         <i class="material-icons topbar-action__caret">expand_more</i>
                     </button>

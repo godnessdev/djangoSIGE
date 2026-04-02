@@ -862,8 +862,12 @@ $.Admin.table = {
         _this.enhancePrimaryCells($table);
         _this.installStatusFilter($table[0]);
 
+        var isServerPaginated = $table.is('[data-server-pagination="true"]');
+
         dTable = $.fn.DataTable.isDataTable($table[0]) ? $table.DataTable() : $table.DataTable({
             "dom" : 'ltipr',
+            "paging": !isServerPaginated,
+            "info": !isServerPaginated,
             "pageLength" : 25,
             "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
             "language" : {

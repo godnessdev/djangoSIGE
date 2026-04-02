@@ -2,11 +2,14 @@
   <table id="lista-database" class="table table-bordered table-striped lista-table">
     <thead>
       <tr>
-        <th>#ID</th>                   
+        <th>#ID</th>
         <th>Data</th>
         <th>Tipo</th>
+        <th>Empresa de origem</th>
+        <th>Empresa de destino</th>
         <th>Local de origem</th>
         <th>Local de destino</th>
+        <th>Impacto no custo</th>
         <th>N° de itens</th>
         <th>Valor total</th>
         <th>Remover</th>
@@ -20,8 +23,11 @@
       <td>{{transferencia.id}}</td>
       <td>{{transferencia.format_data_movimento}}</td>
       <td>Transferência</td>
+      <td>{{transferencia.empresa|default_if_none:""}}</td>
+      <td>{{transferencia.empresa_destino|default_if_none:""}}</td>
       <td>{{transferencia.local_estoque_orig|default_if_none:""}}</td>
       <td>{{transferencia.local_estoque_dest|default_if_none:""}}</td>
+      <td>{{transferencia.get_impacto_custo_display}}</td>
       <td>{{transferencia.format_quantidade_itens}}</td>
       <td>{{transferencia.format_valor_total}}</td>
       <td class="lista-remove">
@@ -30,8 +36,8 @@
       </td>
     </tr>
     {% endfor %}
-    {%else%}
-    {%endif%}
+    {% else %}
+    {% endif %}
   </tbody>
 </table>
 </div>

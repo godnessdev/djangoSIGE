@@ -2,6 +2,7 @@
 
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 
 from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView
@@ -9,6 +10,12 @@ from djangosige.apps.base.custom_views import CustomView, CustomCreateView, Cust
 from djangosige.apps.vendas.forms import OrcamentoVendaForm, PedidoVendaForm, ItensVendaFormSet, PagamentoFormSet
 from djangosige.apps.vendas.models import OrcamentoVenda, PedidoVenda, ItensVenda, Pagamento
 from djangosige.apps.cadastro.models import MinhaEmpresa
+from djangosige.apps.cadastro.utils import (
+    filtrar_queryset_por_empresa_ativa,
+    get_empresa_ativa,
+    get_empresas_grupo_permitidas,
+    pode_consultar_consolidado_grupo,
+)
 from djangosige.apps.login.models import Usuario
 from djangosige.configs.settings import MEDIA_ROOT
 
@@ -23,7 +30,42 @@ except ImportError:
     VendaReport = None
 
 
+def get_empresa_filtro_venda(request):
+    empresa_ativa = get_empresa_ativa(request.user)
+    if empresa_ativa is None:
+        return None
+
+    empresa_id = request.GET.get('empresa')
+    if not empresa_id:
+        return None
+
+    empresas_grupo = get_empresas_grupo_permitidas(
+        request.user, empresa=empresa_ativa)
+    try:
+        return empresas_grupo.get(pk=empresa_id)
+    except Exception:
+        return None
+
+
+def filtrar_vendas_por_escopo(queryset, user, modo='empresa', empresa_filtro=None):
+    empresa_ativa = get_empresa_ativa(user)
+    if empresa_ativa is None:
+        return queryset.none()
+
+    if modo == 'grupo' and pode_consultar_consolidado_grupo(user, empresa_ativa):
+        empresas_grupo = get_empresas_grupo_permitidas(user, empresa=empresa_ativa)
+        if empresa_filtro and empresas_grupo.filter(pk=empresa_filtro.pk).exists():
+            empresas_grupo = empresas_grupo.filter(pk=empresa_filtro.pk)
+        return queryset.filter(empresa__in=empresas_grupo).distinct()
+
+    return queryset.filter(empresa=empresa_ativa)
+
+
 class AdicionarVendaView(CustomCreateView):
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, id=self.object.pk)
@@ -69,7 +111,14 @@ class AdicionarVendaView(CustomCreateView):
             request.POST, prefix='pagamento_form')
 
         if (form.is_valid() and produtos_form.is_valid() and pagamento_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form,
+                                         produtos_form=produtos_form,
+                                         pagamento_form=pagamento_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
             self.object.save()
 
             for pform in produtos_form:
@@ -132,10 +181,41 @@ class AdicionarPedidoVendaView(AdicionarVendaView):
 
 
 class VendaListView(CustomListView):
+    paginate_by = 100
+
+    def get_modo_listagem(self):
+        if self.request.GET.get('modo') == 'grupo' and pode_consultar_consolidado_grupo(
+                self.request.user, get_empresa_ativa(self.request.user)):
+            return 'grupo'
+        return 'empresa'
+
+    def get_empresa_filtro(self):
+        return get_empresa_filtro_venda(self.request)
 
     def get_context_data(self, **kwargs):
         context = super(VendaListView, self).get_context_data(**kwargs)
+        context['empresa_ativa'] = get_empresa_ativa(self.request.user)
+        context['pode_consolidar_grupo'] = pode_consultar_consolidado_grupo(
+            self.request.user, context['empresa_ativa'])
+        context['empresas_grupo'] = get_empresas_grupo_permitidas(
+            self.request.user, empresa=context['empresa_ativa'])
+        context['modo_venda'] = self.get_modo_listagem()
+        context['empresa_filtro_atual'] = self.get_empresa_filtro()
         return self.view_context(context)
+
+    def get_queryset(self):
+        queryset = self.model.objects.select_related(
+            'empresa', 'cliente', 'local_orig').order_by('-id')
+        return filtrar_vendas_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
+
+    def post(self, request, *args, **kwargs):
+        if self.check_user_delete_permission(request, self.model):
+            queryset = self.get_queryset()
+            for key, value in request.POST.items():
+                if value == "on" and queryset.filter(id=key).exists():
+                    queryset.get(id=key).delete()
+        return redirect(self.success_url)
 
 
 class OrcamentoVendaListView(VendaListView):
@@ -160,7 +240,11 @@ class OrcamentoVendaVencidosListView(OrcamentoVendaListView):
         return context
 
     def get_queryset(self):
-        return OrcamentoVenda.objects.filter(data_vencimento__lte=datetime.now().date(), status='0')
+        queryset = OrcamentoVenda.objects.filter(
+            data_vencimento__lte=datetime.now().date(), status='0').select_related(
+                'empresa', 'cliente', 'local_orig').order_by('-id')
+        return filtrar_vendas_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class OrcamentoVendaVencimentoHojeListView(OrcamentoVendaListView):
@@ -173,7 +257,11 @@ class OrcamentoVendaVencimentoHojeListView(OrcamentoVendaListView):
         return context
 
     def get_queryset(self):
-        return OrcamentoVenda.objects.filter(data_vencimento=datetime.now().date(), status='0')
+        queryset = OrcamentoVenda.objects.filter(
+            data_vencimento=datetime.now().date(), status='0').select_related(
+                'empresa', 'cliente', 'local_orig').order_by('-id')
+        return filtrar_vendas_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class PedidoVendaListView(VendaListView):
@@ -198,7 +286,11 @@ class PedidoVendaAtrasadosListView(PedidoVendaListView):
         return context
 
     def get_queryset(self):
-        return PedidoVenda.objects.filter(data_entrega__lte=datetime.now().date(), status='0')
+        queryset = PedidoVenda.objects.filter(
+            data_entrega__lte=datetime.now().date(), status='0').select_related(
+                'empresa', 'cliente', 'local_orig').order_by('-id')
+        return filtrar_vendas_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class PedidoVendaEntregaHojeListView(PedidoVendaListView):
@@ -211,10 +303,18 @@ class PedidoVendaEntregaHojeListView(PedidoVendaListView):
         return context
 
     def get_queryset(self):
-        return PedidoVenda.objects.filter(data_entrega=datetime.now().date(), status='0')
+        queryset = PedidoVenda.objects.filter(
+            data_entrega=datetime.now().date(), status='0').select_related(
+                'empresa', 'cliente', 'local_orig').order_by('-id')
+        return filtrar_vendas_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class EditarVendaView(CustomUpdateView):
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, id=self.object.pk)
@@ -268,7 +368,14 @@ class EditarVendaView(CustomUpdateView):
             request.POST, prefix='pagamento_form', instance=self.object)
 
         if (form.is_valid() and produtos_form.is_valid() and pagamento_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form,
+                                         produtos_form=produtos_form,
+                                         pagamento_form=pagamento_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
             self.object.save()
 
             for pform in produtos_form:
@@ -312,6 +419,10 @@ class EditarOrcamentoVendaView(EditarVendaView):
         form_class = self.get_form_class()
         return super(EditarOrcamentoVendaView, self).post(request, form_class, *args, **kwargs)
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            OrcamentoVenda.objects.all(), self.request.user)
+
 
 class EditarPedidoVendaView(EditarVendaView):
     form_class = PedidoVendaForm
@@ -337,13 +448,20 @@ class EditarPedidoVendaView(EditarVendaView):
         form_class = self.get_form_class()
         return super(EditarPedidoVendaView, self).post(request, form_class, *args, **kwargs)
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            PedidoVenda.objects.all(), self.request.user)
+
 
 class GerarPedidoVendaView(CustomView):
     permission_codename = ['add_pedidovenda', 'change_pedidovenda', ]
 
     def get(self, request, *args, **kwargs):
         orcamento_id = kwargs.get('pk', None)
-        orcamento = OrcamentoVenda.objects.get(id=orcamento_id)
+        orcamento = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoVenda.objects.all(), request.user),
+            id=orcamento_id)
         itens_venda = orcamento.itens_venda.all()
         pagamentos = orcamento.parcela_pagamento.all()
         novo_pedido = PedidoVenda()
@@ -380,7 +498,10 @@ class CancelarOrcamentoVendaView(CustomView):
 
     def get(self, request, *args, **kwargs):
         venda_id = kwargs.get('pk', None)
-        instance = OrcamentoVenda.objects.get(id=venda_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoVenda.objects.all(), request.user),
+            id=venda_id)
         instance.status = '2'
         instance.save()
         return redirect(reverse_lazy('vendas:editarorcamentovendaview', kwargs={'pk': instance.id}))
@@ -391,7 +512,10 @@ class CancelarPedidoVendaView(CustomView):
 
     def get(self, request, *args, **kwargs):
         venda_id = kwargs.get('pk', None)
-        instance = PedidoVenda.objects.get(id=venda_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoVenda.objects.all(), request.user),
+            id=venda_id)
         instance.status = '2'
         instance.save()
         return redirect(reverse_lazy('vendas:editarpedidovendaview', kwargs={'pk': instance.id}))
@@ -428,7 +552,10 @@ class GerarCopiaOrcamentoVendaView(GerarCopiaVendaView):
 
     def get(self, request, *args, **kwargs):
         venda_id = kwargs.get('pk', None)
-        instance = OrcamentoVenda.objects.get(id=venda_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoVenda.objects.all(), request.user),
+            id=venda_id)
         redirect_url = 'vendas:editarorcamentovendaview'
         return super(GerarCopiaOrcamentoVendaView, self).get(request, instance, redirect_url, *args, **kwargs)
 
@@ -438,7 +565,10 @@ class GerarCopiaPedidoVendaView(GerarCopiaVendaView):
 
     def get(self, request, *args, **kwargs):
         venda_id = kwargs.get('pk', None)
-        instance = PedidoVenda.objects.get(id=venda_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoVenda.objects.all(), request.user),
+            id=venda_id)
         redirect_url = 'vendas:editarpedidovendaview'
         return super(GerarCopiaPedidoVendaView, self).get(request, instance, redirect_url, *args, **kwargs)
 
@@ -538,7 +668,9 @@ class GerarPDFOrcamentoVenda(GerarPDFVenda):
         if not venda_id:
             return HttpResponse('Objeto não encontrado.')
 
-        obj = OrcamentoVenda.objects.get(pk=venda_id)
+        obj = filtrar_queryset_por_empresa_ativa(
+            OrcamentoVenda.objects.all(), request.user)
+        obj = get_object_or_404(obj, pk=venda_id)
         title = 'Orçamento de venda nº {}'.format(venda_id)
 
         return self.gerar_pdf(title, obj, request.user.id)
@@ -553,7 +685,9 @@ class GerarPDFPedidoVenda(GerarPDFVenda):
         if not venda_id:
             return HttpResponse('Objeto não encontrado.')
 
-        obj = PedidoVenda.objects.get(pk=venda_id)
+        obj = filtrar_queryset_por_empresa_ativa(
+            PedidoVenda.objects.all(), request.user)
+        obj = get_object_or_404(obj, pk=venda_id)
         title = 'Pedido de venda nº {}'.format(venda_id)
 
         return self.gerar_pdf(title, obj, request.user.id)

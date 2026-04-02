@@ -8,6 +8,10 @@ from djangosige.apps.estoque.models import LocalEstoque
 
 class LocalEstoqueForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super(LocalEstoqueForm, self).__init__(*args, **kwargs)
+
     class Meta:
         model = LocalEstoque
         fields = ('descricao',)

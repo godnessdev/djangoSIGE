@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from djangosige.tests.test_case import BaseTestCase, replace_none_values_in_dictionary
-from djangosige.apps.cadastro.models import Fornecedor, Produto
+from django.contrib.auth.models import Group
+from djangosige.apps.cadastro.models import Empresa, Fornecedor, Produto, MinhaEmpresa, UsuarioEmpresa
 from djangosige.apps.compras.models import OrcamentoCompra, PedidoCompra, ItensCompra
-from djangosige.apps.estoque.models import LocalEstoque, DEFAULT_LOCAL_ID
+from djangosige.apps.estoque.models import LocalEstoque, ProdutoEstocado, DEFAULT_LOCAL_ID
 from django.urls import reverse
 
 from datetime import datetime, timedelta
@@ -29,6 +30,32 @@ COMPRA_FORMSET_DATA = {
     'pagamento_form-TOTAL_FORMS': 1,
     'pagamento_form-INITIAL_FORMS': 0,
 }
+
+
+def configurar_grupo_empresarial(test_case):
+    matriz = Empresa.objects.create(
+        nome_razao_social='Matriz Compras',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_MATRIZ)
+    filial = Empresa.objects.create(
+        nome_razao_social='Filial Compras',
+        tipo_pessoa='PJ',
+        tipo_empresa=Empresa.TIPO_FILIAL,
+        empresa_pai=matriz)
+    fornecedor_matriz = Fornecedor.objects.create(
+        nome_razao_social='Fornecedor Matriz Compras',
+        tipo_pessoa='PJ',
+        empresa_relacionada=matriz)
+    local_matriz = LocalEstoque.objects.create(
+        descricao='Local Matriz Compras', empresa=matriz)
+    local_filial = LocalEstoque.objects.create(
+        descricao='Local Filial Compras', empresa=filial)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=matriz)
+    UsuarioEmpresa.objects.get_or_create(
+        m_usuario=test_case.usuario, m_empresa=filial)
+    MinhaEmpresa.objects.filter(m_usuario=test_case.usuario).update(m_empresa=matriz)
+    return matriz, filial, fornecedor_matriz, local_matriz, local_filial
 
 
 class ComprasAdicionarViewsTestCase(BaseTestCase):
@@ -74,8 +101,9 @@ class ComprasAdicionarViewsTestCase(BaseTestCase):
         # Assert form invalido
         data['fornecedor'] = ''
         response = self.client.post(url, data, follow=True)
-        self.assertFormError(
-            response, 'form', 'fornecedor', 'Este campo é obrigatório.')
+        self.assertEqual(
+            response.context_data['form'].errors['fornecedor'],
+            ['Este campo é obrigatório.'])
 
     def test_add_pedido_compra_view_post_request(self):
         url = reverse('compras:addpedidocompraview')
@@ -108,51 +136,142 @@ class ComprasAdicionarViewsTestCase(BaseTestCase):
         # Assert form invalido
         data['fornecedor'] = ''
         response = self.client.post(url, data, follow=True)
-        self.assertFormError(
-            response, 'form', 'fornecedor', 'Este campo é obrigatório.')
+        self.assertEqual(
+            response.context_data['form'].errors['fornecedor'],
+            ['Este campo é obrigatório.'])
+
+
+    def test_add_pedido_compra_centralizada_para_filial(self):
+        url = reverse('compras:addpedidocompraview')
+        matriz, filial, fornecedor, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+
+        data = {
+            'data_emissao': '16/07/2017',
+            'fornecedor': fornecedor.pk,
+            'status': '0',
+            'tipo_desconto': '0',
+            'desconto': '40,00',
+            'frete': '0,00',
+            'seguro': '0,00',
+            'despesas': '0,00',
+            'mod_frete': '0',
+            'empresa_destino': filial.pk,
+            'total_icms': '0,00',
+            'total_ipi': '0,00',
+            'valor_total': '460,00',
+            'local_dest': local_filial.pk,
+        }
+
+        data.update(COMPRA_FORMSET_DATA)
+
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        pedido = PedidoCompra.objects.order_by('pk').last()
+        self.assertEqual(pedido.empresa, matriz)
+        self.assertEqual(pedido.empresa_destino, filial)
+        self.assertEqual(pedido.local_dest, local_filial)
 
 
 class ComprasListarViewsTestCase(BaseTestCase):
 
     def test_list_orcamento_compra_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
-        obj = OrcamentoCompra.objects.create(fornecedor=fornecedor)
+        obj = OrcamentoCompra.objects.create(
+            fornecedor=fornecedor, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'compras:listaorcamentocompraview'), deleted_object=obj)
 
     def test_list_orcamento_compra_vencido_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
         obj = OrcamentoCompra.objects.create(
-            fornecedor=fornecedor, data_vencimento=datetime.now().date() - timedelta(days=1))
+            fornecedor=fornecedor, empresa=self.empresa_ativa,
+            data_vencimento=datetime.now().date() - timedelta(days=1))
         self.check_list_view_delete(url=reverse(
             'compras:listaorcamentocompravencidosview'), deleted_object=obj)
 
     def test_list_orcamento_compra_vence_hoje_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
         obj = OrcamentoCompra.objects.create(
-            fornecedor=fornecedor, data_vencimento=datetime.now().date())
+            fornecedor=fornecedor, empresa=self.empresa_ativa,
+            data_vencimento=datetime.now().date())
         self.check_list_view_delete(url=reverse(
             'compras:listaorcamentocomprahojeview'), deleted_object=obj)
 
     def test_list_pedido_compra_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
-        obj = PedidoCompra.objects.create(fornecedor=fornecedor)
+        obj = PedidoCompra.objects.create(
+            fornecedor=fornecedor, empresa=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'compras:listapedidocompraview'), deleted_object=obj)
 
     def test_list_pedido_compra_atrasado_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
         obj = PedidoCompra.objects.create(
-            fornecedor=fornecedor, data_entrega=datetime.now().date() - timedelta(days=1))
+            fornecedor=fornecedor, empresa=self.empresa_ativa,
+            data_entrega=datetime.now().date() - timedelta(days=1))
         self.check_list_view_delete(url=reverse(
             'compras:listapedidocompraatrasadosview'), deleted_object=obj)
 
     def test_list_pedido_compra_entrega_hoje_view_deletar_objeto(self):
         fornecedor = Fornecedor.objects.order_by('id').last()
         obj = PedidoCompra.objects.create(
-            fornecedor=fornecedor, data_entrega=datetime.now().date())
+            fornecedor=fornecedor, empresa=self.empresa_ativa,
+            data_entrega=datetime.now().date())
         self.check_list_view_delete(url=reverse(
             'compras:listapedidocomprahojeview'), deleted_object=obj)
+
+    def test_list_pedido_compra_nao_exibe_outra_empresa(self):
+        fornecedor = Fornecedor.objects.order_by('id').last()
+        outra_empresa = Empresa.objects.create(
+            nome_razao_social='Empresa Compras', tipo_pessoa='PJ')
+        local_outra_empresa = LocalEstoque.objects.create(
+            descricao='Local Compras Outra Empresa', empresa=outra_empresa)
+        pedido_outra_empresa = PedidoCompra.objects.create(
+            fornecedor=fornecedor,
+            local_dest=local_outra_empresa,
+            empresa=outra_empresa)
+
+        response = self.client.get(reverse('compras:listapedidocompraview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(pedido_outra_empresa in response.context['all_pedidos'])
+
+    def test_list_pedido_compra_modo_grupo_exibe_filial_para_matriz(self):
+        matriz, filial, fornecedor, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        pedido_filial = PedidoCompra.objects.create(
+            fornecedor=fornecedor,
+            local_dest=local_filial,
+            empresa=filial,
+            empresa_destino=filial)
+
+        response = self.client.get(
+            reverse('compras:listapedidocompraview'),
+            {'modo': 'grupo'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_compra'], 'grupo')
+        self.assertTrue(pedido_filial in response.context['all_pedidos'])
+        self.assertEqual(response.context['empresa_ativa'], matriz)
+
+    def test_list_orcamento_compra_modo_grupo_exibe_filial_para_matriz(self):
+        _matriz, filial, fornecedor, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+        Group.objects.get_or_create(name='gestor_matriz')
+        self.user.groups.add(Group.objects.get(name='gestor_matriz'))
+        orcamento_filial = OrcamentoCompra.objects.create(
+            fornecedor=fornecedor,
+            local_dest=local_filial,
+            empresa=filial,
+            empresa_destino=filial)
+
+        response = self.client.get(
+            reverse('compras:listaorcamentocompraview'),
+            {'modo': 'grupo'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['modo_compra'], 'grupo')
+        self.assertTrue(orcamento_filial in response.context['all_orcamentos'])
 
 
 class ComprasEditarViewsTestCase(BaseTestCase):
@@ -204,6 +323,23 @@ class VendasAjaxRequestViewsTestCase(BaseTestCase):
         self.check_json_response(
             url, data, obj_pk, model='compras.pedidocompra')
 
+    def test_info_compra_nao_retorna_pedido_outra_empresa(self):
+        fornecedor = Fornecedor.objects.order_by('id').last()
+        outra_empresa = Empresa.objects.create(
+            nome_razao_social='Empresa Ajax Compras', tipo_pessoa='PJ')
+        local_outra_empresa = LocalEstoque.objects.create(
+            descricao='Local Ajax Compras', empresa=outra_empresa)
+        pedido_outra_empresa = PedidoCompra.objects.create(
+            fornecedor=fornecedor,
+            local_dest=local_outra_empresa,
+            empresa=outra_empresa)
+
+        response = self.client.post(
+            reverse('compras:infocompra'),
+            {'compraId': pedido_outra_empresa.pk},
+            follow=True)
+        self.assertEqual(response.status_code, 404)
+
 
 class ComprasAcoesUsuarioViewsTestCase(BaseTestCase):
 
@@ -228,7 +364,8 @@ class ComprasAcoesUsuarioViewsTestCase(BaseTestCase):
     def test_gerar_pedido_compra(self):
         # Criar novo orcamento e gerar pedido
         fornecedor = Fornecedor.objects.order_by('id').last()
-        obj = OrcamentoCompra.objects.create(fornecedor=fornecedor)
+        obj = OrcamentoCompra.objects.create(
+            fornecedor=fornecedor, empresa=self.empresa_ativa)
         url = reverse('compras:gerarpedidocompra',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url, follow=True)
@@ -294,7 +431,8 @@ class ComprasAcoesUsuarioViewsTestCase(BaseTestCase):
 
         # Criar novo pedido de compra
         obj = PedidoCompra(movimentar_estoque=True, fornecedor=fornecedor,
-                           local_dest=local_dest, data_entrega=datetime.now().date(), status='0')
+                           local_dest=local_dest, empresa=self.empresa_ativa,
+                           data_entrega=datetime.now().date(), status='0')
         obj.save()
         prod1 = Produto(codigo='000000000000111', descricao='Produto Teste Recebimento Pedido Compra 1',
                         controlar_estoque=True, estoque_atual='0.00')
@@ -328,3 +466,40 @@ class ComprasAcoesUsuarioViewsTestCase(BaseTestCase):
             elif item.produto.pk == prod2.pk:
                 prod2.refresh_from_db()
                 self.assertEqual(item.quantidade, prod2.estoque_atual)
+
+    def test_receber_pedido_compra_centralizada_movimenta_filial_destino(self):
+        matriz, filial, fornecedor, _local_matriz, local_filial = configurar_grupo_empresarial(self)
+
+        obj = PedidoCompra(
+            movimentar_estoque=True,
+            fornecedor=fornecedor,
+            local_dest=local_filial,
+            empresa=matriz,
+            empresa_destino=filial,
+            data_entrega=datetime.now().date(),
+            status='0')
+        obj.save()
+        prod = Produto(
+            codigo='000000000000333',
+            descricao='Produto Teste Recebimento Centralizado',
+            controlar_estoque=True,
+            estoque_atual='0.00')
+        prod.save()
+        item = ItensCompra(
+            produto=prod,
+            quantidade=4,
+            valor_unit='15.00',
+            subtotal='60.00')
+        item.compra_id = obj
+        item.save()
+
+        response = self.client.get(
+            reverse('compras:receberpedidocompra', kwargs={'pk': obj.pk}),
+            follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        obj.refresh_from_db()
+        mvmt_entrada = obj.entrada_estoque_pedido.get()
+        prod_estocado = ProdutoEstocado.objects.get(local=local_filial, produto=prod)
+        self.assertEqual(mvmt_entrada.empresa, filial)
+        self.assertEqual(prod_estocado.quantidade, item.quantidade)

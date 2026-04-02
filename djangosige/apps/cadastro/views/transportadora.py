@@ -3,6 +3,7 @@
 from django.urls import reverse_lazy
 
 from djangosige.apps.cadastro.forms import TransportadoraForm, VeiculoFormSet
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa
 from djangosige.apps.cadastro.models import Transportadora, Veiculo
 
 from .base import AdicionarPessoaView, PessoasListView, EditarPessoaView
@@ -54,6 +55,10 @@ class TransportadorasListView(PessoasListView):
         context['tipo_pessoa'] = 'transportadora'
         return context
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            Transportadora.objects.all(), self.request.user, field_name='empresa_relacionada')
+
 
 class EditarTransportadoraView(EditarPessoaView):
     form_class = TransportadoraForm
@@ -86,6 +91,10 @@ class EditarTransportadoraView(EditarPessoaView):
         return super(
             EditarTransportadoraView, self).get(
                 request, form, veiculo_form=veiculo_form, *args, **kwargs)
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            Transportadora.objects.all(), self.request.user, field_name='empresa_relacionada')
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()

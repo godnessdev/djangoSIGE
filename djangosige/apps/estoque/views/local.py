@@ -6,6 +6,7 @@ from djangosige.apps.base.custom_views import CustomCreateView, CustomListView, 
 
 from djangosige.apps.estoque.forms import LocalEstoqueForm
 from djangosige.apps.estoque.models import LocalEstoque
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa, get_empresa_ativa
 
 
 class AdicionarLocalEstoqueView(CustomCreateView):
@@ -27,6 +28,20 @@ class AdicionarLocalEstoqueView(CustomCreateView):
         context['titulo'] = 'ADICIONAR LOCAL DE ESTOQUE'
         return context
 
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
+
+    def form_valid(self, form):
+        empresa = get_empresa_ativa(self.request.user)
+        if empresa is None:
+            form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+            return self.form_invalid(form)
+        self.object = form.save(commit=False)
+        self.object.empresa = empresa
+        self.object.save()
+        return super(AdicionarLocalEstoqueView, self).form_valid(form)
+
 
 class LocalEstoqueListView(CustomListView):
     template_name = 'estoque/local/local_list.html'
@@ -43,6 +58,10 @@ class LocalEstoqueListView(CustomListView):
     def get_context_data(self, **kwargs):
         context = super(LocalEstoqueListView, self).get_context_data(**kwargs)
         return self.view_context(context)
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            LocalEstoque.objects.all(), self.request.user)
 
 
 class EditarLocalEstoqueView(CustomUpdateView):
@@ -64,3 +83,11 @@ class EditarLocalEstoqueView(CustomUpdateView):
         context = super(EditarLocalEstoqueView,
                         self).get_context_data(**kwargs)
         return self.view_context(context)
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
+
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            LocalEstoque.objects.all(), self.request.user)

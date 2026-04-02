@@ -2,16 +2,21 @@
 
 from django.views.generic import View
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
 import json
 
 from djangosige.apps.vendas.models import PedidoVenda
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa
 
 
 class InfoVenda(View):
 
     def post(self, request, *args, **kwargs):
-        venda = PedidoVenda.objects.get(pk=request.POST['vendaId'])
+        venda = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoVenda.objects.all(), request.user),
+            pk=request.POST['vendaId'])
         itens_venda = venda.itens_venda.all()
         pagamentos = venda.parcela_pagamento.all()
         data = []
@@ -60,7 +65,7 @@ class InfoVenda(View):
             itens_hidden_fields_dict['codigo'] = item.produto.codigo
             itens_hidden_fields_dict['unidade'] = item.produto.get_sigla_unidade(
             )
-            itens_hidden_fields_dict['cfop'] = item.produto.get_cfop_padrao()
+            itens_hidden_fields_dict['cfop'] = item.get_cfop_padrao()
             itens_hidden_fields_dict['ncm'] = item.produto.ncm
             itens_fields_dict['quantidade'] = item.format_quantidade()
             itens_fields_dict['valor_unit'] = item.format_valor_unit()

@@ -28,7 +28,7 @@
               <form role="form" action="{% url 'financeiro:fluxodecaixaview' %}" method="get">
               {% csrf_token %}
 
-                <div class="col-sm-5">
+                <div class="col-sm-3">
                   <div class="form-group">
                     <div class="form-line">
                       <label>Período de</label>
@@ -37,7 +37,7 @@
                   </div>
                 </div>
 
-                <div class="col-sm-5">
+                <div class="col-sm-2">
                   <div class="form-group">
                     <div class="form-line">
                       <label>até</label>
@@ -47,6 +47,36 @@
                 </div>
 
                 <div class="col-sm-2">
+                  <div class="form-group">
+                    <div class="form-line">
+                      <label>Escopo</label>
+                      <select name="modo" class="form-control">
+                        <option value="empresa" {% if modo_financeiro != 'grupo' %}selected{% endif %}>Empresa ativa</option>
+                        {% if pode_consolidar_grupo %}
+                        <option value="grupo" {% if modo_financeiro == 'grupo' %}selected{% endif %}>Grupo empresarial</option>
+                        {% endif %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {% if pode_consolidar_grupo %}
+                <div class="col-sm-3">
+                  <div class="form-group">
+                    <div class="form-line">
+                      <label>Empresa do grupo</label>
+                      <select name="empresa" class="form-control">
+                        <option value="">Todas do grupo</option>
+                        {% for empresa in empresas_grupo %}
+                        <option value="{{empresa.id}}" {% if empresa_filtro_atual and empresa_filtro_atual.id == empresa.id %}selected{% endif %}>{{empresa.nome_razao_social}}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+                <div class="col-sm-2">
                     <button style="margin-top:25px;" class="btn btn-primary foot-btn" type="submit">BUSCAR</button>
                 </div>
 
@@ -54,11 +84,37 @@
 
             </div>
 
+            {% if comparativo_empresas %}
+            <div class="table-responsive" style="margin-bottom: 20px;">
+              <table class="table table-bordered table-striped lista-table">
+                <thead>
+                  <tr>
+                    <th>Empresa</th>
+                    <th>Entradas</th>
+                    <th>SaÃ­das</th>
+                    <th>Saldo final</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in comparativo_empresas %}
+                  <tr>
+                    <td>{{item.empresa}}</td>
+                    <td>{{item.entradas}}</td>
+                    <td>{{item.saidas}}</td>
+                    <td>{{item.saldo_final}}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+
             <div class="table-responsive">
               <table id="lista-database" class="table table-bordered table-striped lista-table">
                 <thead>
                   <tr>
                     <th>Data</th>
+                    <th>Empresa</th>
                     <th>Saldo inicial</th>
                     <th>Entradas</th>
                     <th>Saídas</th>
@@ -71,6 +127,7 @@
                   {% for m in movimentos %}
                   <tr>
                     <td>{{m.format_data_movimento}}</td>
+                    <td>{{m.empresa|default_if_none:""}}</td>
                     <td>{{m.saldo_inicial}}</td>
                     <td>{{m.entradas}}</td>
                     <td>{{m.saidas}}</td>

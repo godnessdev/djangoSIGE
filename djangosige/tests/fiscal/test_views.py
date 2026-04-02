@@ -4,6 +4,7 @@ from djangosige.tests.test_case import BaseTestCase, replace_none_values_in_dict
 from django.urls import reverse
 from django.utils import timezone
 
+from djangosige.apps.cadastro.models import Empresa
 from djangosige.apps.fiscal.models import NaturezaOperacao, GrupoFiscal, NotaFiscalSaida, NotaFiscalEntrada
 from djangosige.apps.vendas.models import PedidoVenda
 
@@ -46,6 +47,8 @@ class FiscalAdicionarViewsTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(
             response, 'fiscal/natureza_operacao/natureza_operacao_list.html')
+        natureza = NaturezaOperacao.objects.get(cfop='1116')
+        self.assertEqual(natureza.empresa_id, self.empresa_ativa.pk)
 
         # Assert form invalido
         data['cfop'] = ''
@@ -76,6 +79,8 @@ class FiscalAdicionarViewsTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(
             response, 'fiscal/grupo_fiscal/grupo_fiscal_list.html')
+        grupo = GrupoFiscal.objects.get(descricao='Grupo Fiscal Teste1')
+        self.assertEqual(grupo.empresa_id, self.empresa_ativa.pk)
 
         # Assert form invalido
         data['descricao'] = ''
@@ -118,7 +123,7 @@ class FiscalAdicionarViewsTestCase(BaseTestCase):
         data['versao'] = ''
         response = self.client.post(url, data, follow=True)
         self.assertFormError(
-            response, 'form', 'versao', 'Este campo é obrigatório.')
+            response.context['form'], 'versao', 'Este campo é obrigatório.')
 
     def test_gerar_nota_fiscal_saida_por_pedido_venda(self):
         # Buscar objeto qualquer
@@ -134,32 +139,71 @@ class FiscalAdicionarViewsTestCase(BaseTestCase):
 class FiscalListarViewsTestCase(BaseTestCase):
 
     def test_list_natureza_operacao_view_deletar_objeto(self):
-        obj = NaturezaOperacao.objects.create(cfop='9999')
+        obj = NaturezaOperacao.objects.create(
+            empresa=self.empresa_ativa, cfop='9999')
         self.check_list_view_delete(url=reverse(
             'fiscal:listanaturezaoperacaoview'), deleted_object=obj)
 
     def test_list_grupo_fiscal_view_deletar_objeto(self):
         obj = GrupoFiscal.objects.create(
+            empresa=self.empresa_ativa,
             descricao='Grupo Fiscal Delete Teste', regime_trib='0')
         self.check_list_view_delete(url=reverse(
             'fiscal:listagrupofiscalview'), deleted_object=obj)
 
     def test_list_nota_fiscal_saida_view_deletar_objeto(self):
-        obj = NotaFiscalSaida.objects.create(dhemi=timezone.now())
+        obj = NotaFiscalSaida.objects.create(
+            dhemi=timezone.now(), emit_saida=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'fiscal:listanotafiscalsaidaview'), deleted_object=obj)
 
     def test_list_nota_fiscal_entrada_view_deletar_objeto(self):
-        obj = NotaFiscalEntrada.objects.create(dhemi=timezone.now())
+        obj = NotaFiscalEntrada.objects.create(
+            dhemi=timezone.now(), dest_entrada=self.empresa_ativa)
         self.check_list_view_delete(url=reverse(
             'fiscal:listanotafiscalentradaview'), deleted_object=obj)
+
+    def test_lista_fiscal_nao_exibe_notas_de_outra_empresa(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Filial Fiscal Teste', tipo_pessoa='PJ')
+        NotaFiscalSaida.objects.create(
+            dhemi=timezone.now(), emit_saida=empresa_secundaria)
+
+        response = self.client.get(reverse('fiscal:listanotafiscalsaidaview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.context['all_notas'].filter(
+                emit_saida=empresa_secundaria).exists())
+
+    def test_lista_natureza_operacao_nao_exibe_outra_empresa(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Empresa Natureza Externa', tipo_pessoa='PJ')
+        NaturezaOperacao.objects.create(empresa=empresa_secundaria, cfop='7999')
+
+        response = self.client.get(reverse('fiscal:listanaturezaoperacaoview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.context['all_natops'].filter(empresa=empresa_secundaria).exists())
+
+    def test_lista_grupo_fiscal_nao_exibe_outra_empresa(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Empresa Grupo Externo', tipo_pessoa='PJ')
+        GrupoFiscal.objects.create(
+            empresa=empresa_secundaria,
+            descricao='Grupo Fiscal Externo', regime_trib='0')
+
+        response = self.client.get(reverse('fiscal:listagrupofiscalview'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.context['all_grupos'].filter(empresa=empresa_secundaria).exists())
 
 
 class FiscalEditarViewsTestCase(BaseTestCase):
 
     def test_edit_natureza_operacao_get_post_request(self):
         # Buscar objeto qualquer
-        obj = NaturezaOperacao.objects.order_by('pk').last()
+        obj = NaturezaOperacao.objects.filter(
+            empresa=self.empresa_ativa).order_by('pk').last()
         url = reverse('fiscal:editarnaturezaoperacaoview',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url)
@@ -174,7 +218,8 @@ class FiscalEditarViewsTestCase(BaseTestCase):
 
     def test_edit_grupo_fiscal_get_post_request(self):
         # Buscar objeto qualquer
-        obj = GrupoFiscal.objects.order_by('pk').last()
+        obj = GrupoFiscal.objects.filter(
+            empresa=self.empresa_ativa).order_by('pk').last()
         url = reverse('fiscal:editargrupofiscalview',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url)
@@ -193,6 +238,27 @@ class FiscalEditarViewsTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(
             response, 'fiscal/grupo_fiscal/grupo_fiscal_list.html')
+
+    def test_edit_natureza_operacao_outra_empresa_retorna_404(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Empresa Natureza Bloqueada', tipo_pessoa='PJ')
+        obj = NaturezaOperacao.objects.create(empresa=empresa_secundaria, cfop='8888')
+
+        response = self.client.get(reverse(
+            'fiscal:editarnaturezaoperacaoview', kwargs={'pk': obj.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_grupo_fiscal_outra_empresa_retorna_404(self):
+        empresa_secundaria = Empresa.objects.create(
+            nome_razao_social='Empresa Grupo Bloqueado', tipo_pessoa='PJ')
+        obj = GrupoFiscal.objects.create(
+            empresa=empresa_secundaria,
+            descricao='Grupo Fiscal Bloqueado',
+            regime_trib='0')
+
+        response = self.client.get(reverse(
+            'fiscal:editargrupofiscalview', kwargs={'pk': obj.pk}))
+        self.assertEqual(response.status_code, 404)
 
     def test_edit_nota_fiscal_saida_get_post_request(self):
         # Buscar objeto qualquer
@@ -215,11 +281,26 @@ class FiscalEditarViewsTestCase(BaseTestCase):
         data['natop'] = ''
         response = self.client.post(url, data, follow=True)
         self.assertFormError(
-            response, 'form', 'natop', 'Este campo é obrigatório.')
+            response.context['form'], 'natop', 'Este campo é obrigatório.')
 
     def test_edit_nota_fiscal_entrada_get_post_request(self):
-        # Buscar objeto qualquer
-        obj = NotaFiscalEntrada.objects.order_by('pk').last()
+        obj = NotaFiscalEntrada.objects.create(
+            versao='3.10',
+            natop='Natureza entrada teste',
+            indpag='0',
+            mod='55',
+            serie='1',
+            dhemi=timezone.now(),
+            iddest='1',
+            tp_imp='1',
+            tp_emis='1',
+            tp_amb='2',
+            fin_nfe='1',
+            ind_final='0',
+            ind_pres='0',
+            status_nfe='3',
+            n_nf_entrada='9001',
+            dest_entrada=self.empresa_ativa)
         url = reverse('fiscal:editarnotafiscalentradaview',
                       kwargs={'pk': obj.pk})
         response = self.client.get(url)
@@ -237,7 +318,7 @@ class FiscalEditarViewsTestCase(BaseTestCase):
         data['natop'] = ''
         response = self.client.post(url, data, follow=True)
         self.assertFormError(
-            response, 'form', 'natop', 'Este campo é obrigatório.')
+            response.context['form'], 'natop', 'Este campo é obrigatório.')
 
 
 class FiscalConfiguracaoNotaFiscalViewTestCase(BaseTestCase):

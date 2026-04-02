@@ -15,6 +15,9 @@ ID_DEST_OPCOES = (
 
 
 class NaturezaOperacao(models.Model):
+    empresa = models.ForeignKey(
+        'cadastro.Empresa', related_name='naturezas_operacao',
+        on_delete=models.CASCADE, null=True, blank=True)
     cfop = models.CharField(max_length=5)
     descricao = models.CharField(max_length=255, null=True, blank=True)
     tp_operacao = models.CharField(

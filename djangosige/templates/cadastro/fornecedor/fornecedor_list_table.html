@@ -1,6 +1,6 @@
 
 <div class="table-responsive">
-  <table id="lista-database" class="table table-bordered table-striped lista-table">
+  <table id="lista-database" class="table table-bordered table-striped lista-table"{% if server_paginated_list %} data-server-pagination="true"{% endif %}>
     <thead>
       <tr>
         <th>#ID</th>                   
@@ -19,8 +19,8 @@
       <td>{{fornecedor.id}}</td>
       <td>{{fornecedor.nome_razao_social}}</td>
       <td>{% if fornecedor.tipo_pessoa == "PJ" %}{{fornecedor.pessoa_jur_info.cnpj|default_if_none:""}}{% else %}{{fornecedor.pessoa_fis_info.cpf|default_if_none:""}}{% endif %}</td>
-      <td>{% if fornecedor.endereco.all.0.uf %}{{fornecedor.endereco.all.0.get_uf_display}}{% endif %}</td>
-      <td>{{fornecedor.endereco.all.0.municipio|default_if_none:""}}</td>
+      <td>{% if fornecedor.endereco_padrao and fornecedor.endereco_padrao.uf %}{{fornecedor.endereco_padrao.get_uf_display}}{% endif %}</td>
+      <td>{% if fornecedor.endereco_padrao %}{{fornecedor.endereco_padrao.municipio|default_if_none:""}}{% endif %}</td>
       <td class="lista-remove">
         <input type="checkbox" name="{{fornecedor.id}}" id="remover-entrada-{{fornecedor.id}}"/>
         <label class="remove-entry-label" for="remover-entrada-{{fornecedor.id}}"></label>

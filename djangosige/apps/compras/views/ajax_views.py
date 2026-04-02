@@ -2,16 +2,21 @@
 
 from django.views.generic import View
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
 import json
 
 from djangosige.apps.compras.models import PedidoCompra
+from djangosige.apps.cadastro.utils import filtrar_queryset_por_empresa_ativa
 
 
 class InfoCompra(View):
 
     def post(self, request, *args, **kwargs):
-        compra = PedidoCompra.objects.get(pk=request.POST['compraId'])
+        compra = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoCompra.objects.all(), request.user),
+            pk=request.POST['compraId'])
         itens_compra = compra.itens_compra.all()
         pagamentos = compra.parcela_pagamento.all()
         data = []

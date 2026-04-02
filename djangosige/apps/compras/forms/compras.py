@@ -5,11 +5,13 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 
 from djangosige.apps.compras.models import OrcamentoCompra, PedidoCompra, ItensCompra, Compra
+from djangosige.apps.cadastro.utils import get_empresa_ativa, get_empresas_grupo_permitidas
 
 
 class CompraForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(CompraForm, self).__init__(*args, **kwargs)
         self.fields['status'].initial = '0'
 
@@ -34,14 +36,38 @@ class CompraForm(forms.ModelForm):
         self.fields['total_icms'].localize = True
         self.fields['total_icms'].initial = '0.00'
 
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            if empresa.tipo_empresa == empresa.TIPO_MATRIZ:
+                empresas_destino = get_empresas_grupo_permitidas(
+                    self.user, empresa=empresa)
+                if not empresas_destino.exists():
+                    empresas_destino = self.fields['empresa_destino'].queryset.filter(
+                        pk=empresa.pk)
+            else:
+                empresas_destino = self.fields['empresa_destino'].queryset.filter(
+                    pk=empresa.pk)
+
+            self.fields['empresa_destino'].queryset = empresas_destino
+            self.fields['fornecedor'].queryset = self.fields['fornecedor'].queryset.filter(
+                empresa_relacionada=empresa)
+            self.fields['local_dest'].queryset = self.fields['local_dest'].queryset.filter(
+                empresa__in=empresas_destino).select_related('empresa').order_by(
+                    'empresa__nome_razao_social', 'descricao')
+            self.fields['empresa_destino'].initial = (
+                self.instance.empresa_destino_id or empresa.pk)
+            self.initial['empresa_destino'] = (
+                self.instance.empresa_destino_id or empresa.pk)
+
     class Meta:
-        fields = ('data_emissao', 'fornecedor', 'mod_frete', 'desconto', 'tipo_desconto', 'frete', 'despesas', 'local_dest',
+        fields = ('data_emissao', 'fornecedor', 'mod_frete', 'desconto', 'tipo_desconto', 'frete', 'despesas', 'empresa_destino', 'local_dest',
                   'movimentar_estoque', 'seguro', 'total_ipi', 'total_icms', 'valor_total', 'cond_pagamento', 'observacoes', )
 
         widgets = {
             'data_emissao': forms.DateInput(attrs={'class': 'form-control datepicker'}),
             'fornecedor': forms.Select(attrs={'class': 'form-control'}),
             'mod_frete': forms.Select(attrs={'class': 'form-control'}),
+            'empresa_destino': forms.Select(attrs={'class': 'form-control'}),
             'local_dest': forms.Select(attrs={'class': 'form-control'}),
             'movimentar_estoque': forms.CheckboxInput(attrs={'class': 'form-control'}),
             'valor_total': forms.TextInput(attrs={'class': 'form-control decimal-mask', 'readonly': True}),
@@ -59,6 +85,7 @@ class CompraForm(forms.ModelForm):
             'data_emissao': _('Data de Emissão'),
             'fornecedor': _('Fornecedor'),
             'mod_frete': _('Modalidade do frete'),
+            'empresa_destino': _('Empresa abastecida'),
             'local_dest': _('Localização de estoque de destino dos produtos'),
             'movimentar_estoque': _('Movimentar estoque?'),
             'vendedor': _('Vendedor'),

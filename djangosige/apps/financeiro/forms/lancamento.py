@@ -4,8 +4,8 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from djangosige.apps.financeiro.models import Saida, Entrada, STATUS_CONTA_ENTRADA_ESCOLHAS, STATUS_CONTA_SAIDA_ESCOLHAS
 from djangosige.apps.financeiro.models import PlanoContasGrupo
-from djangosige.apps.login.models import Usuario
-from djangosige.apps.cadastro.models import MinhaEmpresa, Banco
+from djangosige.apps.cadastro.models import Banco
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 
 
 class LancamentoForm(forms.ModelForm):
@@ -17,18 +17,17 @@ class LancamentoForm(forms.ModelForm):
         self.fields['juros'].localize = True
         self.fields['valor_liquido'].localize = True
         self.fields['valor_total'].localize = True
+        self.empresa_ativa = None
 
         if user:
             try:
-                usuario = Usuario.objects.get(user=user)
-                m_empresa = MinhaEmpresa.objects.get(
-                    m_usuario=usuario).m_empresa
-                if m_empresa:
-                    if Banco.objects.filter(pessoa_banco=m_empresa).count():
+                self.empresa_ativa = get_empresa_ativa(user)
+                if self.empresa_ativa:
+                    if Banco.objects.filter(pessoa_banco=self.empresa_ativa).count():
                         self.fields['conta_corrente'].choices = (
                             (None, '----------'),)
                         self.fields['conta_corrente'].choices += (
-                            (conta.id, str(conta)) for conta in Banco.objects.filter(pessoa_banco=m_empresa))
+                            (conta.id, str(conta)) for conta in Banco.objects.filter(pessoa_banco=self.empresa_ativa))
                     else:
                         self.fields['conta_corrente'].choices = (
                             (None, '----------'),)
@@ -72,9 +71,11 @@ class EntradaForm(LancamentoForm):
         super(EntradaForm, self).__init__(*args, **kwargs)
         self.fields['status'].initial = '0'
 
-        if PlanoContasGrupo.objects.filter(tipo_grupo='1').count():
+        grupos = PlanoContasGrupo.objects.filter(
+            tipo_grupo='0', empresa=self.empresa_ativa)
+        if grupos.exists():
             self.fields['grupo_plano'].choices = ((grupo.id, str(grupo.codigo) + ' - ' + str(
-                grupo.descricao)) for grupo in PlanoContasGrupo.objects.filter(tipo_grupo='0'))
+                grupo.descricao)) for grupo in grupos.order_by('codigo'))
         else:
             self.fields['grupo_plano'].choices = ((None, '----------'),)
 
@@ -96,9 +97,11 @@ class SaidaForm(LancamentoForm):
         super(SaidaForm, self).__init__(*args, **kwargs)
         self.fields['status'].initial = '0'
 
-        if PlanoContasGrupo.objects.filter(tipo_grupo='1').count():
+        grupos = PlanoContasGrupo.objects.filter(
+            tipo_grupo='1', empresa=self.empresa_ativa)
+        if grupos.exists():
             self.fields['grupo_plano'].choices = ((grupo.id, str(grupo.codigo) + ' - ' + str(
-                grupo.descricao)) for grupo in PlanoContasGrupo.objects.filter(tipo_grupo='1'))
+                grupo.descricao)) for grupo in grupos.order_by('codigo'))
         else:
             self.fields['grupo_plano'].choices = ((None, '----------'),)
 

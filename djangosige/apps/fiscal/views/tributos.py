@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 
 from djangosige.apps.base.custom_views import CustomCreateView, CustomListView, CustomUpdateView
+from djangosige.apps.cadastro.utils import get_empresa_ativa
 
 from djangosige.apps.fiscal.forms import GrupoFiscalForm, ICMSForm, ICMSSNForm, ICMSUFDestForm, IPIForm, PISForm, COFINSForm
 from djangosige.apps.fiscal.models import GrupoFiscal, ICMS, ICMSSN, ICMSUFDest, IPI
@@ -90,6 +92,7 @@ class AdicionarGrupoFiscalView(CustomCreateView):
                 cofins_form.is_valid()):
 
             self.object = form.save(commit=False)
+            self.object.empresa = get_empresa_ativa(request.user)
             self.object.save()
 
             novo_icms_form.instance.grupo_fiscal = self.object
@@ -124,6 +127,18 @@ class GrupoFiscalListView(CustomListView):
     success_url = reverse_lazy('fiscal:listagrupofiscalview')
     permission_codename = 'view_grupofiscal'
 
+    def get_queryset(self):
+        empresa = get_empresa_ativa(self.request.user)
+        return GrupoFiscal.objects.filter(empresa=empresa).order_by('descricao')
+
+    def post(self, request, *args, **kwargs):
+        if self.check_user_delete_permission(request, self.model):
+            queryset = self.get_queryset()
+            for key, value in request.POST.items():
+                if value == "on":
+                    queryset.filter(id=key).delete()
+        return redirect(self.success_url)
+
     def get_context_data(self, **kwargs):
         context = super(GrupoFiscalListView, self).get_context_data(**kwargs)
         context['title_complete'] = 'GRUPOS FISCAIS CADASTRADOS'
@@ -138,6 +153,10 @@ class EditarGrupoFiscalView(CustomUpdateView):
     success_url = reverse_lazy('fiscal:listagrupofiscalview')
     success_message = "Grupo fiscal <b>%(descricao)s </b>editado com sucesso."
     permission_codename = 'change_grupofiscal'
+
+    def get_queryset(self):
+        empresa = get_empresa_ativa(self.request.user)
+        return GrupoFiscal.objects.filter(empresa=empresa)
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, descricao=self.object.descricao)

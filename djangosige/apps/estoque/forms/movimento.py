@@ -6,11 +6,13 @@ from django.forms import inlineformset_factory
 
 from djangosige.apps.estoque.models import MovimentoEstoque, ItensMovimento, EntradaEstoque, SaidaEstoque, TransferenciaEstoque
 from djangosige.apps.cadastro.models import Produto
+from djangosige.apps.cadastro.utils import get_empresa_ativa, get_empresas_grupo_permitidas
 
 
 class MovimentoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(MovimentoForm, self).__init__(*args, **kwargs)
         self.fields['quantidade_itens'].localize = True
         self.fields['valor_total'].localize = True
@@ -35,6 +37,12 @@ class EntradaEstoqueForm(MovimentoForm):
 
     def __init__(self, *args, **kwargs):
         super(EntradaEstoqueForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['local_dest'].queryset = self.fields['local_dest'].queryset.filter(
+                empresa=empresa)
+            self.fields['pedido_compra'].queryset = self.fields['pedido_compra'].queryset.filter(
+                empresa=empresa)
 
     class Meta(MovimentoForm.Meta):
         model = EntradaEstoque
@@ -59,6 +67,12 @@ class SaidaEstoqueForm(MovimentoForm):
 
     def __init__(self, *args, **kwargs):
         super(SaidaEstoqueForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['local_orig'].queryset = self.fields['local_orig'].queryset.filter(
+                empresa=empresa)
+            self.fields['pedido_venda'].queryset = self.fields['pedido_venda'].queryset.filter(
+                empresa=empresa)
 
     class Meta(MovimentoForm.Meta):
         model = SaidaEstoque
@@ -80,20 +94,37 @@ class TransferenciaEstoqueForm(MovimentoForm):
 
     def __init__(self, *args, **kwargs):
         super(TransferenciaEstoqueForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['local_estoque_orig'].queryset = self.fields['local_estoque_orig'].queryset.filter(
+                empresa=empresa)
+            empresas_destino = get_empresas_grupo_permitidas(
+                self.user, empresa=empresa)
+            self.fields['empresa_destino'].queryset = empresas_destino
+            self.fields['empresa_destino'].initial = empresa.pk
+            self.fields['local_estoque_dest'].queryset = self.fields['local_estoque_dest'].queryset.filter(
+                empresa__in=empresas_destino)
+            self.fields['impacto_custo'].initial = 'MAN'
 
     class Meta(MovimentoForm.Meta):
         model = TransferenciaEstoque
         fields = MovimentoForm.Meta.fields + \
-            ('local_estoque_orig', 'local_estoque_dest',)
+            ('empresa_destino', 'local_estoque_orig', 'local_estoque_dest', 'impacto_custo',)
         widgets = MovimentoForm.Meta.widgets
+        widgets['empresa_destino'] = forms.Select(
+            attrs={'class': 'form-control'})
         widgets['local_estoque_orig'] = forms.Select(
             attrs={'class': 'form-control'})
         widgets['local_estoque_dest'] = forms.Select(
             attrs={'class': 'form-control'})
+        widgets['impacto_custo'] = forms.Select(
+            attrs={'class': 'form-control'})
         labels = MovimentoForm.Meta.labels
         labels['data_movimento'] = _('Data da transferência')
+        labels['empresa_destino'] = _('Empresa de destino')
         labels['local_estoque_orig'] = _('Local de origem')
         labels['local_estoque_dest'] = _('Local de destino')
+        labels['impacto_custo'] = _('Impacto no custo')
 
 
 class ItensMovimentoForm(forms.ModelForm):
@@ -101,6 +132,7 @@ class ItensMovimentoForm(forms.ModelForm):
         attrs={'class': 'form-control', 'readonly': True}), label='Estoque atual', required=False)
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(ItensMovimentoForm, self).__init__(*args, **kwargs)
         new_order = ['produto', 'quantidade',
                      'estoque_atual', 'valor_unit', 'subtotal']
@@ -110,8 +142,13 @@ class ItensMovimentoForm(forms.ModelForm):
         self.fields['valor_unit'].localize = True
         self.fields['subtotal'].localize = True
 
+        empresa = get_empresa_ativa(self.user)
+        produtos = Produto.objects.filter(controlar_estoque=True)
+        if empresa:
+            produtos = produtos.filter(
+                produto_estocado__local__empresa=empresa).distinct()
         self.fields['produto'].choices = (
-            (prod.id, str(prod)) for prod in Produto.objects.filter(controlar_estoque=True))
+            (prod.id, str(prod)) for prod in produtos.order_by('descricao'))
         self.fields['produto'].choices.insert(0, ((None, '----------')))
 
     class Meta:
@@ -139,5 +176,22 @@ class ItensMovimentoForm(forms.ModelForm):
         return valid
 
 
-ItensMovimentoFormSet = inlineformset_factory(
+BaseItensMovimentoFormSet = inlineformset_factory(
     MovimentoEstoque, ItensMovimento, form=ItensMovimentoForm, extra=1, can_delete=True)
+
+
+class ItensMovimentoFormSet(BaseItensMovimentoFormSet):
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(ItensMovimentoFormSet, self).__init__(*args, **kwargs)
+        for form in self.forms:
+            form.user = user
+            empresa = get_empresa_ativa(user)
+            produtos = Produto.objects.filter(controlar_estoque=True)
+            if empresa:
+                produtos = produtos.filter(
+                    produto_estocado__local__empresa=empresa).distinct()
+            form.fields['produto'].choices = [
+                (None, '----------')
+            ] + [(prod.id, str(prod)) for prod in produtos.order_by('descricao')]

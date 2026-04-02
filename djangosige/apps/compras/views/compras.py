@@ -3,6 +3,7 @@
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 
 from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView
@@ -10,6 +11,12 @@ from djangosige.apps.base.custom_views import CustomView, CustomCreateView, Cust
 from djangosige.apps.compras.forms import OrcamentoCompraForm, PedidoCompraForm, ItensCompraFormSet, PagamentoFormSet
 from djangosige.apps.compras.models import OrcamentoCompra, PedidoCompra, ItensCompra, Pagamento
 from djangosige.apps.cadastro.models import MinhaEmpresa
+from djangosige.apps.cadastro.utils import (
+    filtrar_queryset_por_empresa_ativa,
+    get_empresa_ativa,
+    get_empresas_grupo_permitidas,
+    pode_consultar_consolidado_grupo,
+)
 from djangosige.apps.estoque.models import ProdutoEstocado, EntradaEstoque, ItensMovimento
 from djangosige.apps.login.models import Usuario
 from djangosige.configs.settings import MEDIA_ROOT
@@ -25,7 +32,42 @@ except ImportError:
     CompraReport = None
 
 
+def get_empresa_filtro_compra(request):
+    empresa_ativa = get_empresa_ativa(request.user)
+    if empresa_ativa is None:
+        return None
+
+    empresa_id = request.GET.get('empresa')
+    if not empresa_id:
+        return None
+
+    empresas_grupo = get_empresas_grupo_permitidas(
+        request.user, empresa=empresa_ativa)
+    try:
+        return empresas_grupo.get(pk=empresa_id)
+    except Exception:
+        return None
+
+
+def filtrar_compras_por_escopo(queryset, user, modo='empresa', empresa_filtro=None):
+    empresa_ativa = get_empresa_ativa(user)
+    if empresa_ativa is None:
+        return queryset.none()
+
+    if modo == 'grupo' and pode_consultar_consolidado_grupo(user, empresa_ativa):
+        empresas_grupo = get_empresas_grupo_permitidas(user, empresa=empresa_ativa)
+        if empresa_filtro and empresas_grupo.filter(pk=empresa_filtro.pk).exists():
+            empresas_grupo = empresas_grupo.filter(pk=empresa_filtro.pk)
+        return queryset.filter(empresa__in=empresas_grupo).distinct()
+
+    return queryset.filter(empresa=empresa_ativa)
+
+
 class AdicionarCompraView(CustomCreateView):
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, id=self.object.pk)
@@ -72,7 +114,16 @@ class AdicionarCompraView(CustomCreateView):
             request.POST, prefix='pagamento_form')
 
         if (form.is_valid() and produtos_form.is_valid() and pagamento_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form,
+                                         produtos_form=produtos_form,
+                                         pagamento_form=pagamento_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
+            self.object.empresa_destino = (
+                form.cleaned_data.get('empresa_destino') or empresa)
             self.object.save()
 
             for pform in produtos_form:
@@ -135,10 +186,39 @@ class AdicionarPedidoCompraView(AdicionarCompraView):
 
 
 class CompraListView(CustomListView):
+    def get_modo_listagem(self):
+        if self.request.GET.get('modo') == 'grupo' and pode_consultar_consolidado_grupo(
+                self.request.user, get_empresa_ativa(self.request.user)):
+            return 'grupo'
+        return 'empresa'
+
+    def get_empresa_filtro(self):
+        return get_empresa_filtro_compra(self.request)
 
     def get_context_data(self, **kwargs):
         context = super(CompraListView, self).get_context_data(**kwargs)
+        context['empresa_ativa'] = get_empresa_ativa(self.request.user)
+        context['pode_consolidar_grupo'] = pode_consultar_consolidado_grupo(
+            self.request.user, context['empresa_ativa'])
+        context['empresas_grupo'] = get_empresas_grupo_permitidas(
+            self.request.user, empresa=context['empresa_ativa'])
+        context['modo_compra'] = self.get_modo_listagem()
+        context['empresa_filtro_atual'] = self.get_empresa_filtro()
         return self.view_context(context)
+
+    def get_queryset(self):
+        queryset = self.model.objects.select_related(
+            'empresa', 'empresa_destino', 'fornecedor', 'local_dest')
+        return filtrar_compras_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
+
+    def post(self, request, *args, **kwargs):
+        if self.check_user_delete_permission(request, self.model):
+            queryset = self.get_queryset()
+            for key, value in request.POST.items():
+                if value == "on" and queryset.filter(id=key).exists():
+                    queryset.get(id=key).delete()
+        return redirect(self.success_url)
 
 
 class OrcamentoCompraListView(CompraListView):
@@ -163,7 +243,11 @@ class OrcamentoCompraVencidosListView(OrcamentoCompraListView):
         return context
 
     def get_queryset(self):
-        return OrcamentoCompra.objects.filter(data_vencimento__lte=datetime.now().date(), status='0')
+        queryset = OrcamentoCompra.objects.filter(
+            data_vencimento__lte=datetime.now().date(), status='0').select_related(
+                'empresa', 'empresa_destino', 'fornecedor', 'local_dest')
+        return filtrar_compras_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class OrcamentoCompraVencimentoHojeListView(OrcamentoCompraListView):
@@ -176,7 +260,11 @@ class OrcamentoCompraVencimentoHojeListView(OrcamentoCompraListView):
         return context
 
     def get_queryset(self):
-        return OrcamentoCompra.objects.filter(data_vencimento=datetime.now().date(), status='0')
+        queryset = OrcamentoCompra.objects.filter(
+            data_vencimento=datetime.now().date(), status='0').select_related(
+                'empresa', 'empresa_destino', 'fornecedor', 'local_dest')
+        return filtrar_compras_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class PedidoCompraListView(CompraListView):
@@ -201,7 +289,11 @@ class PedidoCompraAtrasadosListView(PedidoCompraListView):
         return context
 
     def get_queryset(self):
-        return PedidoCompra.objects.filter(data_entrega__lte=datetime.now().date(), status='0')
+        queryset = PedidoCompra.objects.filter(
+            data_entrega__lte=datetime.now().date(), status='0').select_related(
+                'empresa', 'empresa_destino', 'fornecedor', 'local_dest')
+        return filtrar_compras_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class PedidoCompraEntregaHojeListView(PedidoCompraListView):
@@ -214,10 +306,18 @@ class PedidoCompraEntregaHojeListView(PedidoCompraListView):
         return context
 
     def get_queryset(self):
-        return PedidoCompra.objects.filter(data_entrega=datetime.now().date(), status='0')
+        queryset = PedidoCompra.objects.filter(
+            data_entrega=datetime.now().date(), status='0').select_related(
+                'empresa', 'empresa_destino', 'fornecedor', 'local_dest')
+        return filtrar_compras_por_escopo(
+            queryset, self.request.user, self.get_modo_listagem(), self.get_empresa_filtro())
 
 
 class EditarCompraView(CustomUpdateView):
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        return form_class(**self.get_form_kwargs(), user=self.request.user)
 
     def get_success_message(self, cleaned_data):
         return self.success_message % dict(cleaned_data, id=self.object.pk)
@@ -274,7 +374,16 @@ class EditarCompraView(CustomUpdateView):
             request.POST, prefix='pagamento_form', instance=self.object)
 
         if (form.is_valid() and produtos_form.is_valid() and pagamento_form.is_valid()):
+            empresa = get_empresa_ativa(request.user)
+            if empresa is None:
+                form.add_error(None, 'Selecione uma empresa ativa para continuar.')
+                return self.form_invalid(form=form,
+                                         produtos_form=produtos_form,
+                                         pagamento_form=pagamento_form)
             self.object = form.save(commit=False)
+            self.object.empresa = empresa
+            self.object.empresa_destino = (
+                form.cleaned_data.get('empresa_destino') or empresa)
             self.object.save()
 
             for pform in produtos_form:
@@ -318,6 +427,10 @@ class EditarOrcamentoCompraView(EditarCompraView):
         form_class = self.get_form_class()
         return super(EditarOrcamentoCompraView, self).post(request, form_class, *args, **kwargs)
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            OrcamentoCompra.objects.all(), self.request.user)
+
 
 class EditarPedidoCompraView(EditarCompraView):
     form_class = PedidoCompraForm
@@ -343,13 +456,20 @@ class EditarPedidoCompraView(EditarCompraView):
         form_class = self.get_form_class()
         return super(EditarPedidoCompraView, self).post(request, form_class, *args, **kwargs)
 
+    def get_queryset(self):
+        return filtrar_queryset_por_empresa_ativa(
+            PedidoCompra.objects.all(), self.request.user)
+
 
 class GerarPedidoCompraView(CustomView):
     permission_codename = ['add_pedidocompra', 'change_pedidocompra', ]
 
     def get(self, request, *args, **kwargs):
         orcamento_id = kwargs.get('pk', None)
-        orcamento = OrcamentoCompra.objects.get(id=orcamento_id)
+        orcamento = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoCompra.objects.all(), request.user),
+            id=orcamento_id)
         itens_compra = orcamento.itens_compra.all()
         pagamentos = orcamento.parcela_pagamento.all()
         novo_pedido = PedidoCompra()
@@ -386,7 +506,10 @@ class CancelarOrcamentoCompraView(CustomView):
 
     def get(self, request, *args, **kwargs):
         compra_id = kwargs.get('pk', None)
-        instance = OrcamentoCompra.objects.get(id=compra_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoCompra.objects.all(), request.user),
+            id=compra_id)
         instance.status = '2'
         instance.save()
         return redirect(reverse_lazy('compras:editarorcamentocompraview', kwargs={'pk': instance.id}))
@@ -397,7 +520,10 @@ class CancelarPedidoCompraView(CustomView):
 
     def get(self, request, *args, **kwargs):
         compra_id = kwargs.get('pk', None)
-        instance = PedidoCompra.objects.get(id=compra_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoCompra.objects.all(), request.user),
+            id=compra_id)
         instance.status = '2'
         instance.save()
         return redirect(reverse_lazy('compras:editarpedidocompraview', kwargs={'pk': instance.id}))
@@ -434,7 +560,10 @@ class GerarCopiaOrcamentoCompraView(GerarCopiaCompraView):
 
     def get(self, request, *args, **kwargs):
         compra_id = kwargs.get('pk', None)
-        instance = OrcamentoCompra.objects.get(id=compra_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                OrcamentoCompra.objects.all(), request.user),
+            id=compra_id)
         redirect_url = 'compras:editarorcamentocompraview'
         return super(GerarCopiaOrcamentoCompraView, self).get(request, instance, redirect_url, *args, **kwargs)
 
@@ -444,7 +573,10 @@ class GerarCopiaPedidoCompraView(GerarCopiaCompraView):
 
     def get(self, request, *args, **kwargs):
         compra_id = kwargs.get('pk', None)
-        instance = PedidoCompra.objects.get(id=compra_id)
+        instance = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoCompra.objects.all(), request.user),
+            id=compra_id)
         redirect_url = 'compras:editarpedidocompraview'
         return super(GerarCopiaPedidoCompraView, self).get(request, instance, redirect_url, *args, **kwargs)
 
@@ -454,7 +586,10 @@ class ReceberPedidoCompraView(CustomView):
 
     def get(self, request, *args, **kwargs):
         compra_id = kwargs.get('pk', None)
-        pedido = PedidoCompra.objects.get(id=compra_id)
+        pedido = get_object_or_404(
+            filtrar_queryset_por_empresa_ativa(
+                PedidoCompra.objects.all(), request.user),
+            id=compra_id)
         lista_prod_estocado = []
         lista_itens_entrada = []
 
@@ -489,6 +624,7 @@ class ReceberPedidoCompraView(CustomView):
             entrada_estoque.valor_total = pedido.get_total_produtos_estoque()
             entrada_estoque.pedido_compra = pedido
             entrada_estoque.local_dest = pedido.local_dest
+            entrada_estoque.empresa = pedido.get_empresa_abastecida()
 
             entrada_estoque.save()
 
@@ -603,7 +739,9 @@ class GerarPDFOrcamentoCompra(GerarPDFCompra):
         if not compra_id:
             return HttpResponse('Objeto não encontrado.')
 
-        obj = OrcamentoCompra.objects.get(pk=compra_id)
+        obj = filtrar_queryset_por_empresa_ativa(
+            OrcamentoCompra.objects.all(), request.user)
+        obj = get_object_or_404(obj, pk=compra_id)
         title = 'Orçamento de compra nº {}'.format(compra_id)
 
         return self.gerar_pdf(title, obj, request.user.id)
@@ -618,7 +756,9 @@ class GerarPDFPedidoCompra(GerarPDFCompra):
         if not compra_id:
             return HttpResponse('Objeto não encontrado.')
 
-        obj = PedidoCompra.objects.get(pk=compra_id)
+        obj = filtrar_queryset_por_empresa_ativa(
+            PedidoCompra.objects.all(), request.user)
+        obj = get_object_or_404(obj, pk=compra_id)
         title = 'Pedido de compra nº {}'.format(compra_id)
 
         return self.gerar_pdf(title, obj, request.user.id)

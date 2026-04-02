@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from djangosige.tests.test_case import BaseTestCase, TEST_USERNAME, TEST_PASSWORD
-from djangosige.apps.cadastro.models import Empresa, MinhaEmpresa
+from djangosige.apps.cadastro.models import Empresa, MinhaEmpresa, UsuarioEmpresa
 from djangosige.apps.login.models import Usuario
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.urls import reverse
 from django.db.models import Q
 
@@ -124,6 +124,7 @@ class EditarPerfilViewTestCase(BaseTestCase):
         url = reverse('login:editarperfilview')
         m_empresa = Empresa.objects.create()
         usuario = Usuario.objects.get(user=self.user)
+        UsuarioEmpresa.objects.create(m_usuario=usuario, m_empresa=m_empresa)
 
         # Sem MinhaEmpresa cadastrada
         response = self.client.get(url)
@@ -148,8 +149,15 @@ class SelecionarMinhaEmpresaViewTestCase(BaseTestCase):
 
     def test_selecionar_empresa_view(self):
         url = reverse('login:selecionarempresaview')
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
         m_empresa = Empresa.objects.create()
+        outra_empresa = Empresa.objects.filter(
+            ~Q(id__in=[m_empresa.pk, self.empresa_ativa.pk])).first() or Empresa.objects.create()
         usuario = Usuario.objects.get(user=self.user)
+        UsuarioEmpresa.objects.get_or_create(m_usuario=usuario, m_empresa=m_empresa)
+        UsuarioEmpresa.objects.get_or_create(m_usuario=usuario, m_empresa=outra_empresa)
         MinhaEmpresa.objects.filter(m_usuario=usuario).delete()
 
         # Usuario sem MinhaEmpresa
@@ -170,12 +178,28 @@ class SelecionarMinhaEmpresaViewTestCase(BaseTestCase):
         self.assertTemplateUsed(
             response, 'login/selecionar_minha_empresa.html')
 
-        m_empresa = Empresa.objects.filter(~Q(id=m_empresa.pk)).first()
+        m_empresa = outra_empresa
         data = {'m_empresa': m_empresa.pk, }
         response = self.client.post(url, data, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(usuario.empresa_usuario.all()[
                          0].m_empresa.pk, m_empresa.pk)
+
+    def test_usuario_nao_pode_selecionar_empresa_nao_autorizada(self):
+        url = reverse('login:selecionarempresaview')
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+        empresa_autorizada = Empresa.objects.create()
+        empresa_nao_autorizada = Empresa.objects.create()
+        usuario = Usuario.objects.get(user=self.user)
+        UsuarioEmpresa.objects.get_or_create(
+            m_usuario=usuario, m_empresa=empresa_autorizada)
+
+        response = self.client.post(
+            url, {'m_empresa': empresa_nao_autorizada.pk}, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('m_empresa', response.context['form'].errors)
 
 
 class UsuariosListViewTestCase(BaseTestCase):
@@ -213,6 +237,54 @@ class UsuarioDetailViewTestCase(BaseTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'login/detalhe_users.html')
+
+
+class EditarPermissoesUsuarioViewTestCase(BaseTestCase):
+
+    def test_editar_permissoes_salva_empresas_permitidas(self):
+        empresa_1 = Empresa.objects.create(nome_razao_social='Empresa 1', tipo_pessoa='PJ')
+        empresa_2 = Empresa.objects.create(nome_razao_social='Empresa 2', tipo_pessoa='PJ')
+        usuario_target_user = User.objects.create_user(
+            'usuario-empresas', 'usuario-empresas@test.com', 'testpass')
+        usuario_target = Usuario.objects.get_or_create(user=usuario_target_user)[0]
+
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+
+        url = reverse('login:permissoesusuarioview', kwargs={'pk': usuario_target_user.pk})
+        response = self.client.post(url, {
+            'empresas': [empresa_1.pk, empresa_2.pk],
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(usuario_target.empresas_permitidas.values_list('m_empresa_id', flat=True)),
+            {empresa_1.pk, empresa_2.pk}
+        )
+        self.assertEqual(
+            MinhaEmpresa.objects.get(m_usuario=usuario_target).m_empresa_id,
+            empresa_1.pk
+        )
+
+    def test_editar_permissoes_salva_perfil_operacional(self):
+        empresa_1 = Empresa.objects.create(nome_razao_social='Empresa Perfil', tipo_pessoa='PJ')
+        usuario_target_user = User.objects.create_user(
+            'usuario-perfil', 'usuario-perfil@test.com', 'testpass')
+        usuario_target = Usuario.objects.get_or_create(user=usuario_target_user)[0]
+
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.login(username=TEST_USERNAME, password=TEST_PASSWORD)
+
+        url = reverse('login:permissoesusuarioview', kwargs={'pk': usuario_target_user.pk})
+        response = self.client.post(url, {
+            'empresas': [empresa_1.pk],
+            'perfil_usuario': 'gestor_filial',
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            usuario_target_user.groups.filter(name='gestor_filial').exists())
+        self.assertTrue(Group.objects.filter(name='gestor_matriz').exists())
 
 
 class DeletarUsuarioViewTestCase(BaseTestCase):

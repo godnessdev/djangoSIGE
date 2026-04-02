@@ -6,6 +6,9 @@ from django.utils.translation import gettext_lazy as _
 
 from djangosige.apps.fiscal.models import NotaFiscalSaida, NotaFiscalEntrada, AutXML, ConfiguracaoNotaFiscal, TP_AMB_ESCOLHAS, MOD_NFE_ESCOLHAS
 from djangosige.apps.cadastro.models import Empresa
+from djangosige.apps.cadastro.utils import get_empresa_ativa
+from djangosige.apps.compras.models import PedidoCompra
+from djangosige.apps.vendas.models import PedidoVenda
 
 try:
     from pysignfe.nfe.manifestacao_destinatario import MD_CONFIRMACAO_OPERACAO, MD_DESCONHECIMENTO_OPERACAO, MD_OPERACAO_NAO_REALIZADA, MD_CIENCIA_OPERACAO
@@ -26,6 +29,7 @@ TP_MANIFESTO_OPCOES = (
 class NotaFiscalForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(NotaFiscalForm, self).__init__(*args, **kwargs)
         self.fields['dhemi'].input_formats = ('%d/%m/%Y %H:%M',)
 
@@ -86,6 +90,18 @@ class NotaFiscalSaidaForm(NotaFiscalForm):
         self.fields['v_orig'].localize = True
         self.fields['v_desc'].localize = True
         self.fields['v_liq'].localize = True
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['venda'].queryset = PedidoVenda.objects.filter(
+                empresa=empresa)
+            self.fields['emit_saida'].queryset = Empresa.objects.filter(
+                pk=empresa.pk)
+            self.fields['dest_saida'].queryset = self.fields['dest_saida'].queryset.filter(
+                empresa_relacionada=empresa)
+        else:
+            self.fields['venda'].queryset = PedidoVenda.objects.none()
+            self.fields['emit_saida'].queryset = Empresa.objects.none()
+            self.fields['dest_saida'].queryset = self.fields['dest_saida'].queryset.none()
 
     class Meta(NotaFiscalForm.Meta):
         model = NotaFiscalSaida
@@ -125,6 +141,21 @@ class NotaFiscalSaidaForm(NotaFiscalForm):
 
 
 class NotaFiscalEntradaForm(NotaFiscalForm):
+
+    def __init__(self, *args, **kwargs):
+        super(NotaFiscalEntradaForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(self.user)
+        if empresa:
+            self.fields['compra'].queryset = PedidoCompra.objects.filter(
+                empresa=empresa)
+            self.fields['dest_entrada'].queryset = Empresa.objects.filter(
+                pk=empresa.pk)
+            self.fields['emit_entrada'].queryset = self.fields['emit_entrada'].queryset.filter(
+                empresa_relacionada=empresa)
+        else:
+            self.fields['compra'].queryset = PedidoCompra.objects.none()
+            self.fields['dest_entrada'].queryset = Empresa.objects.none()
+            self.fields['emit_entrada'].queryset = self.fields['emit_entrada'].queryset.none()
 
     class Meta(NotaFiscalForm.Meta):
         model = NotaFiscalEntrada
@@ -201,6 +232,13 @@ class ConsultarCadastroForm(forms.Form):
     salvar_arquivos = forms.BooleanField(widget=forms.CheckboxInput(
         attrs={'class': 'form-control', }), label='Salvar arquivos XML gerados?', required=False)
 
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(ConsultarCadastroForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(user)
+        self.fields['empresa'].queryset = Empresa.objects.filter(
+            pk=empresa.pk) if empresa else Empresa.objects.none()
+
 
 class InutilizarNotasForm(forms.Form):
     ambiente = forms.ChoiceField(choices=TP_AMB_ESCOLHAS, widget=forms.Select(
@@ -220,6 +258,13 @@ class InutilizarNotasForm(forms.Form):
     salvar_arquivos = forms.BooleanField(widget=forms.CheckboxInput(
         attrs={'class': 'form-control', }), label='Salvar arquivos XML gerados?', required=False)
 
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(InutilizarNotasForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(user)
+        self.fields['empresa'].queryset = Empresa.objects.filter(
+            pk=empresa.pk) if empresa else Empresa.objects.none()
+
 
 class ConsultarNotaForm(forms.Form):
     ambiente = forms.ChoiceField(choices=TP_AMB_ESCOLHAS, widget=forms.Select(
@@ -230,6 +275,13 @@ class ConsultarNotaForm(forms.Form):
         attrs={'class': 'form-control', }), label='Chave da nota', required=False)
     salvar_arquivos = forms.BooleanField(widget=forms.CheckboxInput(
         attrs={'class': 'form-control', }), label='Salvar arquivos XML gerados?', required=False)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(ConsultarNotaForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(user)
+        self.fields['nota'].queryset = NotaFiscalSaida.objects.filter(
+            emit_saida=empresa) if empresa else NotaFiscalSaida.objects.none()
 
 
 class BaixarNotaForm(forms.Form):
@@ -243,6 +295,13 @@ class BaixarNotaForm(forms.Form):
         attrs={'class': 'form-control', }), label='Utilizar ambiente nacional?(Recomendado)', initial=True, required=False)
     salvar_arquivos = forms.BooleanField(widget=forms.CheckboxInput(
         attrs={'class': 'form-control', }), label='Salvar arquivos XML gerados?', required=False)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(BaixarNotaForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(user)
+        self.fields['nota'].queryset = NotaFiscalSaida.objects.filter(
+            emit_saida=empresa) if empresa else NotaFiscalSaida.objects.none()
 
 
 class ManifestacaoDestinatarioForm(forms.Form):
@@ -262,6 +321,13 @@ class ManifestacaoDestinatarioForm(forms.Form):
         attrs={'class': 'form-control', }), label='Justificativa', required=False)
     salvar_arquivos = forms.BooleanField(widget=forms.CheckboxInput(
         attrs={'class': 'form-control', }), label='Salvar arquivos XML gerados?', required=False)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(ManifestacaoDestinatarioForm, self).__init__(*args, **kwargs)
+        empresa = get_empresa_ativa(user)
+        self.fields['nota'].queryset = NotaFiscalSaida.objects.filter(
+            emit_saida=empresa) if empresa else NotaFiscalSaida.objects.none()
 
 
 class AutXMLForm(forms.ModelForm):

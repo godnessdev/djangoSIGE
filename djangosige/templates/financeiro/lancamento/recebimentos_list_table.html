@@ -5,6 +5,7 @@
         <th>#ID</th>                   
         <th>Descrição</th>
         <th>Data do Pagamento</th>
+        <th>Empresa</th>
         <th>Grupo</th>
         <th>Cliente</th>
         <th>Valor líquido</th>
@@ -15,10 +16,11 @@
     <tbody>
      {% if all_entradas %}
      {% for entrada in all_entradas %}
-     <tr class="clickable-row" data-href="{% url 'financeiro:editarrecebimentoview' entrada.id %}">
+     <tr{% if empresa_ativa and entrada.empresa_id == empresa_ativa.id %} class="clickable-row" data-href="{% url 'financeiro:editarrecebimentoview' entrada.id %}"{% endif %}>
       <td>{{entrada.id}}</td>
       <td>{{entrada.descricao}}</td>
       <td>{{entrada.format_data_pagamento|default_if_none:""}}</td>
+      <td>{{entrada.empresa|default_if_none:""}}</td>
       <td>{{entrada.classificacao|default_if_none:""}}</td>
       <td>{{entrada.cliente|default_if_none:""}}</td>
       <td>{{entrada.format_valor_liquido}}</td>
