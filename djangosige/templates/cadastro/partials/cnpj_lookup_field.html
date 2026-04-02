@@ -1,0 +1,13 @@
+<div class="input-group cnpj-lookup-group">
+  <div class="form-line cnpj-lookup-group__field">
+    {{ cnpj_field }}
+  </div>
+  <button
+    type="button"
+    class="input-group-addon js-cnpj-lookup"
+    data-lookup-url="{% url 'cadastro:consultacnpj' %}"
+    title="Consultar CNPJ"
+    aria-label="Consultar CNPJ">
+    <i class="material-icons add-new-icon" title="Consultar CNPJ">&#xE8B6;</i>
+  </button>
+</div>

@@ -32,12 +32,12 @@
 </div>
 
 <div class="col-sm-6 {{pessoa_juridica_form.prefix}}">
-  <div class="form-group">
-    <div class="form-line">
-      <label>{{pessoa_juridica_form.cnpj.label}}</label>
-      {% if pessoa_juridica_form.cnpj.errors %}<label class="error">{% for error in pessoa_juridica_form.cnpj.errors %}{{error}}{% endfor %}</label>{% endif %}
-      {{pessoa_juridica_form.cnpj}}
-    </div>
+  <div class="form-group has-field-action">
+    <label>{{pessoa_juridica_form.cnpj.label}}</label>
+    {% if pessoa_juridica_form.cnpj.errors %}<label class="error">{% for error in pessoa_juridica_form.cnpj.errors %}{{error}}{% endfor %}</label>{% endif %}
+    {% with cnpj_field=pessoa_juridica_form.cnpj %}
+    {% include 'cadastro/partials/cnpj_lookup_field.html' %}
+    {% endwith %}
   </div>
 </div>
 

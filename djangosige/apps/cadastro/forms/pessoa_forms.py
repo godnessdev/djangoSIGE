@@ -24,7 +24,11 @@ class PessoaJuridicaForm(forms.ModelForm):
 
         widgets = {
             'nome_fantasia': forms.TextInput(attrs={'class': 'form-control'}),
-            'cnpj': forms.TextInput(attrs={'class': 'form-control'}),
+            'cnpj': forms.TextInput(attrs={
+                'class': 'form-control',
+                'data-cnpj-lookup-field': 'cnpj',
+                'autocomplete': 'off',
+            }),
             'inscricao_estadual': forms.TextInput(attrs={'class': 'form-control'}),
             'responsavel': forms.TextInput(attrs={'class': 'form-control'}),
             'sit_fiscal': forms.Select(attrs={'class': 'form-control'}),

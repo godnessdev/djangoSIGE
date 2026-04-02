@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import json
+from unittest.mock import patch
+
 from djangosige.tests.test_case import BaseTestCase, replace_none_values_in_dictionary
 from djangosige.apps.cadastro.models import Produto, Unidade, Marca, Categoria, Transportadora, Fornecedor, Cliente, Empresa
 from django.urls import reverse
@@ -283,6 +286,19 @@ class CadastroEditarViewsTestCase(BaseTestCase):
 
 class CadastroAjaxRequestViewsTestCase(BaseTestCase):
 
+    class _MockHTTPResponse(object):
+        def __init__(self, payload):
+            self.payload = payload
+
+        def read(self):
+            return json.dumps(self.payload).encode('utf-8')
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
     def test_info_cliente_post_request(self):
         # Buscar objeto qualquer
         obj = Cliente.objects.order_by('pk').last()
@@ -316,3 +332,51 @@ class CadastroAjaxRequestViewsTestCase(BaseTestCase):
         url = reverse('cadastro:infoproduto')
         data = {'produtoId': obj_pk}
         self.check_json_response(url, data, obj_pk, model='cadastro.produto')
+
+    @patch('djangosige.apps.cadastro.views.ajax_views.urllib_request.urlopen')
+    def test_consulta_cnpj_get_request(self, mocked_urlopen):
+        mocked_urlopen.return_value = self._MockHTTPResponse({
+            'cnpj': '27865757000102',
+            'razao_social': 'EMPRESA VALIDACAO LTDA',
+            'nome_fantasia': 'EMPRESA VALIDACAO',
+            'logradouro': 'Rua Exemplo',
+            'numero': '100',
+            'complemento': 'Sala 2',
+            'bairro': 'Centro',
+            'municipio': 'Belo Horizonte',
+            'uf': 'MG',
+            'cep': '30110000',
+            'ddd_telefone_1': '31',
+            'telefone_1': '33334444',
+            'email': 'contato@example.com',
+            'qsa': [{'nome_socio': 'SOCIO TESTE'}],
+        })
+
+        response = self.client.get(reverse('cadastro:consultacnpj'), {'cnpj': '27.865.757/0001-02'})
+        self.assertEqual(response.status_code, 200)
+
+        payload = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['data']['nome_razao_social'], 'EMPRESA VALIDACAO LTDA')
+        self.assertEqual(payload['data']['cnpj'], '27.865.757/0001-02')
+        self.assertEqual(payload['data']['telefone'], '(31) 3333-4444')
+
+    def test_consulta_preco_produto_get_request(self):
+        produto = Produto.objects.create(
+            codigo='PRECO001',
+            descricao='Produto Preco Teste',
+            venda='1250.90',
+            custo='900.00',
+            estoque_minimo='1.00',
+            estoque_atual='5.00',
+        )
+
+        response = self.client.get(reverse('cadastro:consultaprecoproduto'), {'term': 'Prod'})
+        self.assertEqual(response.status_code, 200)
+
+        payload = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(payload['success'])
+        self.assertGreaterEqual(len(payload['results']), 1)
+        result = next(item for item in payload['results'] if item['id'] == produto.pk)
+        self.assertEqual(result['descricao'], 'Produto Preco Teste')
+        self.assertEqual(result['preco'], 'R$ 1.250,90')

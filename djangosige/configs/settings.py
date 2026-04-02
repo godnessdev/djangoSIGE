@@ -1,6 +1,7 @@
 import os
 from decouple import Csv
 from dj_database_url import parse as dburl
+from djangosige import __version__
 from .configs import DEFAULT_DATABASE_URL, DEFAULT_FROM_EMAIL, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, EMAIL_PORT, EMAIL_USE_TLS
 
 APP_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -50,6 +51,16 @@ SECRET_KEY = project_config('SECRET_KEY')
 DEBUG = env_bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = project_config('ALLOWED_HOSTS', default='', cast=Csv())
+
+APP_DISPLAY_NAME = project_config('APP_DISPLAY_NAME', default='DevLab ERP')
+APP_BRAND_PRIMARY = project_config('APP_BRAND_PRIMARY', default='DevLab')
+APP_BRAND_ACCENT = project_config('APP_BRAND_ACCENT', default='SIGE')
+APP_TAGLINE = project_config('APP_TAGLINE', default='Sistema integrado de gestao.')
+APP_VERSION = project_config('APP_VERSION', default=__version__)
+APP_COPYRIGHT_START_YEAR = project_config('APP_COPYRIGHT_START_YEAR', default='2017')
+APP_DOCS_URL = project_config('APP_DOCS_URL', default='https://instagram.com/leonardovieira.sh')
+CNPJ_LOOKUP_URL_TEMPLATE = project_config('CNPJ_LOOKUP_URL_TEMPLATE', default='https://brasilapi.com.br/api/cnpj/v1/{cnpj}')
+CNPJ_LOOKUP_TIMEOUT = project_config('CNPJ_LOOKUP_TIMEOUT', default='8', cast=int)
 
 if not DEFAULT_DATABASE_URL:
     DEFAULT_DATABASE_URL = 'sqlite:///' + os.path.join(APP_ROOT, 'db.sqlite3')
@@ -112,6 +123,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 # contexto para a versao do sige
                 'djangosige.apps.base.context_version.sige_version',
+                # contexto para shell principal
+                'djangosige.apps.base.context_shell.shell_navigation',
                 # contexto para a foto de perfil do usuario
                 'djangosige.apps.login.context_user.foto_usuario',
             ],

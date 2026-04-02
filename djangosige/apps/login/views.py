@@ -16,6 +16,7 @@ from django.core.mail import send_mail
 from django.urls import reverse_lazy
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.conf import settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.template import loader
@@ -130,13 +131,14 @@ class ForgotPasswordView(FormView):
                         c = {
                             'email': associated_user.email,
                             'domain': request.META['HTTP_HOST'],
-                            'site_name': 'djangoSIGE',
+                            'site_name': settings.APP_DISPLAY_NAME,
+                            'app_display_name': settings.APP_DISPLAY_NAME,
                             'uid': urlsafe_base64_encode(force_bytes(associated_user.pk)).decode(encoding="utf-8"),
                             'user': associated_user,
                             'token': default_token_generator.make_token(associated_user),
                             'protocol': 'http://',
                         }
-                        subject = u"Redefinir sua senha - DjangoSIGE"
+                        subject = u"Redefinir sua senha - {0}".format(settings.APP_DISPLAY_NAME)
                         email_template_name = 'login/trocar_senha_email.html'
                         email_mensagem = loader.render_to_string(
                             email_template_name, c)

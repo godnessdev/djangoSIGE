@@ -98,6 +98,8 @@ urlpatterns = [
         views.EditarMarcaView.as_view(), name='editarmarcaview'),
 
     # Informacoes de dada empresa (Ajax request)
+    url(r'consultacnpj/$', views.ConsultaCNPJ.as_view(), name='consultacnpj'),
+    url(r'consultaprecoproduto/$', views.ConsultaPrecoProduto.as_view(), name='consultaprecoproduto'),
     url(r'infoempresa/$', views.InfoEmpresa.as_view(), name='infoempresa'),
     url(r'infofornecedor/$', views.InfoFornecedor.as_view(), name='infofornecedor'),
     url(r'infocliente/$', views.InfoCliente.as_view(), name='infocliente'),

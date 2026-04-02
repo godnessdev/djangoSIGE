@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import json
+import re
+from urllib import error as urllib_error
+from urllib import request as urllib_request
+
+from django.conf import settings
 from django.views.generic import View
 from django.http import HttpResponse
+from django.http import JsonResponse
 from django.core import serializers
 from django.shortcuts import render
+from django.urls import reverse
 
 from djangosige.apps.cadastro.models import Pessoa, Cliente, Fornecedor, Transportadora, Produto
 from djangosige.apps.fiscal.models import ICMS, ICMSSN, IPI, ICMSUFDest
@@ -17,10 +25,69 @@ def _empty_json_response():
     return HttpResponse('[]', content_type='application/json')
 
 
+def _normalize_digits(value):
+    return re.sub(r'\D', '', value or '')
+
+
+def _format_cnpj(value):
+    digits = _normalize_digits(value)
+    if len(digits) != 14:
+        return value or ''
+    return '{0}.{1}.{2}/{3}-{4}'.format(
+        digits[0:2], digits[2:5], digits[5:8], digits[8:12], digits[12:14]
+    )
+
+
+def _format_phone(ddd, phone):
+    digits = _normalize_digits('{0}{1}'.format(ddd or '', phone or ''))
+    if len(digits) == 10:
+        return '({0}) {1}-{2}'.format(digits[0:2], digits[2:6], digits[6:10])
+    if len(digits) == 11:
+        return '({0}) {1}-{2}'.format(digits[0:2], digits[2:7], digits[7:11])
+    return digits
+
+
+def _extract_cnpj_lookup_data(payload):
+    qsa = payload.get('qsa') or []
+    first_partner = qsa[0] if qsa and isinstance(qsa[0], dict) else {}
+    return {
+        'bairro': payload.get('bairro') or '',
+        'cep': _normalize_digits(payload.get('cep')),
+        'cnpj': _format_cnpj(payload.get('cnpj')),
+        'complemento': payload.get('complemento') or '',
+        'email': payload.get('email') or '',
+        'logradouro': payload.get('logradouro') or '',
+        'municipio': payload.get('municipio') or '',
+        'nome_fantasia': payload.get('nome_fantasia') or '',
+        'nome_razao_social': payload.get('razao_social') or payload.get('nome_fantasia') or '',
+        'numero': payload.get('numero') or 'S/N',
+        'pais': 'Brasil',
+        'responsavel': first_partner.get('nome_socio') or '',
+        'telefone': _format_phone(payload.get('ddd_telefone_1'), payload.get('telefone_1')),
+        'uf': payload.get('uf') or '',
+    }
+
+
+def _cnpj_lookup_error_message(payload, default_message):
+    if isinstance(payload, dict):
+        for key in ('message', 'mensagem', 'detail'):
+            if payload.get(key):
+                return payload[key]
+    return default_message
+
+
 def _format_decimal(value):
     if value in (None, ''):
         return ''
     return str(value).replace('.', ',')
+
+
+def _format_currency(value):
+    if value in (None, ''):
+        value = 0
+    normalized = '{:,.2f}'.format(value)
+    normalized = normalized.replace(',', 'v').replace('.', ',').replace('v', '.')
+    return 'R$ {0}'.format(normalized)
 
 
 def _format_ie_indicator(value):
@@ -216,6 +283,67 @@ class InfoTransportadora(View):
             )
 
         return HttpResponse(data, content_type='application/json')
+
+
+class ConsultaCNPJ(View):
+
+    def get(self, request, *args, **kwargs):
+        cnpj = _normalize_digits(request.GET.get('cnpj'))
+        if len(cnpj) != 14:
+            return JsonResponse({'success': False, 'error': 'Informe um CNPJ valido com 14 digitos.'}, status=400)
+
+        lookup_url = settings.CNPJ_LOOKUP_URL_TEMPLATE.format(cnpj=cnpj)
+        req = urllib_request.Request(lookup_url, headers={'User-Agent': settings.APP_DISPLAY_NAME})
+
+        try:
+            with urllib_request.urlopen(req, timeout=settings.CNPJ_LOOKUP_TIMEOUT) as response:
+                payload = json.loads(response.read().decode('utf-8'))
+        except urllib_error.HTTPError as exc:
+            raw_payload = exc.read().decode('utf-8', errors='ignore')
+            try:
+                payload = json.loads(raw_payload)
+            except ValueError:
+                payload = {}
+            return JsonResponse({
+                'success': False,
+                'error': _cnpj_lookup_error_message(payload, 'Nao foi possivel consultar o CNPJ informado.'),
+            }, status=exc.code or 502)
+        except (urllib_error.URLError, TimeoutError, ValueError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Servico de consulta de CNPJ indisponivel no momento.',
+            }, status=502)
+
+        return JsonResponse({
+            'success': True,
+            'data': _extract_cnpj_lookup_data(payload),
+        })
+
+
+class ConsultaPrecoProduto(View):
+
+    def get(self, request, *args, **kwargs):
+        term = (request.GET.get('term') or '').strip()
+        if len(term) < 2:
+            return JsonResponse({'success': True, 'results': []})
+
+        queryset = Produto.objects.filter(descricao__istartswith=term).order_by('descricao')[:8]
+        if not queryset.exists():
+            queryset = Produto.objects.filter(codigo__istartswith=term).order_by('descricao')[:8]
+
+        results = []
+        for produto in queryset:
+            results.append({
+                'id': produto.pk,
+                'codigo': produto.codigo or '',
+                'descricao': produto.descricao or '',
+                'estoque': _format_decimal(produto.estoque_atual),
+                'preco': _format_currency(produto.venda),
+                'unidade': produto.get_sigla_unidade() or '',
+                'edit_url': reverse('cadastro:editarprodutoview', kwargs={'pk': produto.pk}),
+            })
+
+        return JsonResponse({'success': True, 'results': results})
 
 
 class InfoProduto(View):

@@ -24,6 +24,11 @@ class FrontendTemplateContractTestCase(SimpleTestCase):
         self.assertIn("js/admin.js", template)
         self.assertIn("js/progressive-enhancement.js", template)
         self.assertIn("window.SIGE_ASSETS.dataTables", template)
+        self.assertIn('id="global-nav-search"', template)
+        self.assertIn('id="topbar-quick-create"', template)
+        self.assertIn('id="topbar-price-lookup"', template)
+        self.assertIn('id="topbar-notifications"', template)
+        self.assertIn('id="topbar-user-menu"', template)
         self.assertNotRegex(template, r"<script[^>]+src=\"[^\"]*jquery\.dataTables\.min\.js")
 
     def test_error_templates_do_not_ship_runtime_javascript(self):
@@ -33,8 +38,28 @@ class FrontendTemplateContractTestCase(SimpleTestCase):
                 self.assertNotIn("js/jquery/jquery-3.0.0.min.js", template)
                 self.assertNotIn("js/bootstrap/bootstrap.min.js", template)
 
+    def test_search_partial_declares_list_toolbar_contract(self):
+        template = (TEMPLATE_ROOT / "base" / "search.html").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn('id="search-bar"', template)
+        self.assertIn('id="list-toolbar-filters"', template)
+        self.assertIn('id="list-status-filter"', template)
+        self.assertIn('id="list-summary"', template)
+
 
 class FrontendRenderContractValidationTestCase(BaseTestCase):
+
+    def test_dashboard_renders_decision_driven_sections(self):
+        response = self.client.get(reverse("base:index"))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertIn('id="dashboard-overview"', html)
+        self.assertIn('id="dashboard-financial-grid"', html)
+        self.assertIn('id="dashboard-chart"', html)
+        self.assertIn('id="global-nav-search"', html)
+        self.assertIn('id="topbar-price-lookup"', html)
+        self.assertIn('id="topbar-notifications"', html)
+        self.assertIn("Dashboard operacional", html)
+        self.assertIn("Alertas prioritarios", html)
 
     def test_form_pages_render_shell_without_eager_datatables_script(self):
         form_pages = (
@@ -67,6 +92,8 @@ class FrontendRenderContractValidationTestCase(BaseTestCase):
                 html = response.content.decode("utf-8")
                 self.assertIn('id="lista-database"', html)
                 self.assertIn('id="search-bar"', html)
+                self.assertIn('id="list-toolbar-filters"', html)
+                self.assertIn('id="list-summary"', html)
                 self.assertIn("window.SIGE_ASSETS.dataTables", html)
 
     def test_tabs_and_modal_contract_markers_are_present(self):
@@ -75,6 +102,8 @@ class FrontendRenderContractValidationTestCase(BaseTestCase):
         pessoa_html = pessoa_response.content.decode("utf-8")
         self.assertIn('href="#tab_banco"', pessoa_html)
         self.assertIn('id="tab_banco"', pessoa_html)
+        self.assertIn('class="input-group-addon js-cnpj-lookup"', pessoa_html)
+        self.assertIn(reverse("cadastro:consultacnpj"), pessoa_html)
 
         fiscal_response = self.client.get(reverse("fiscal:addnotafiscalsaidaview"))
         self.assertEqual(fiscal_response.status_code, 200)

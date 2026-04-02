@@ -1,4 +1,4 @@
-if (typeof jQuery === "undefined") {
+﻿if (typeof jQuery === "undefined") {
     throw new Error("Carregar JQuery antes deste arquivo.");
 }
 
@@ -149,7 +149,7 @@ $.Admin.messages = {
         $('#modal-msg #btn-ok').hide();
     },
 
-    //Mensagem operação não permitida
+    //Mensagem operaÃ§Ã£o nÃ£o permitida
     msgAlerta: function(message){
         if(window.AppCore && window.AppCore.messages){
             window.AppCore.messages.alert(message);
@@ -157,7 +157,7 @@ $.Admin.messages = {
         }
         $('#modal-msg .modal-header span i').text('error_outline').addClass('icon-alert');
         $('#modal-msg .modal-body p').text(message);
-        $('#modal-msg .modal-title').text('Operação não permitida');
+        $('#modal-msg .modal-title').text('OperaÃ§Ã£o nÃ£o permitida');
         $('#modal-msg').modal('show');
         $('#modal-msg #btn-ok').show();
         $('#modal-msg #btn-sim').hide();
@@ -255,21 +255,21 @@ $.Admin.table = {
             "dom" : 'ltipr',
             "language" : {
                 "sEmptyTable": "Nenhum registro encontrado",
-                "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
-                "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                "sInfo": "Mostrando de _START_ ate _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 ate 0 de 0 registros",
                 "sInfoFiltered": "(Filtrados de _MAX_ registros)",
                 "sInfoPostFix": "",
                 "sInfoThousands": ".",
-                "sLengthMenu": "Mostrar _MENU_ resultados por página",
+                "sLengthMenu": "Mostrar _MENU_ resultados por pagina",
                 "sLoadingRecords": "Carregando...",
                 "sProcessing": "Processando...",
                 "sZeroRecords": "Nenhum registro encontrado",
                 "sSearch": "Pesquisar",
                 "oPaginate": {
-                    "sNext": "Próximo",
+                    "sNext": "Proximo",
                     "sPrevious": "Anterior",
                     "sFirst": "Primeiro",
-                    "sLast": "Último"
+                    "sLast": "Ultimo"
                 },
                 "oAria": {
                     "sSortAscending": ": Ordenar colunas de forma ascendente",
@@ -297,7 +297,7 @@ $.Admin.table = {
         $btnRemove.on('click',function(event){
             event.preventDefault();
             var form = $(this).parents('form');
-            $.Admin.messages.msgRemove("Os items selecionados serão removidos permanentemente da Base de Dados.");
+            $.Admin.messages.msgRemove("Os itens selecionados serao removidos permanentemente da base de dados.");
             $('#btn-sim').one('click', function(){
                 form.submit();
             });
@@ -305,7 +305,7 @@ $.Admin.table = {
 
         //Fazer a linha da table um link para a detail view
         $('body').on('click', '.clickable-row:not(.popup)', function(event){
-            if(!$(event.target).is("input, label, i, .prevent-click-row")){
+            if(!$(event.target).is("input, label, i, .prevent-click-row, button")){
                 window.document.location = $(this).data("href");
             }
         });
@@ -315,6 +315,430 @@ $.Admin.table = {
 
 $.Admin.table = {
     _dateSortRegistered: false,
+    _statusFilterInstalled: false,
+
+    normalizeText: function(value) {
+        var text = String(value || '').toLowerCase().trim();
+        if (text.normalize) {
+            text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+        return text;
+    },
+
+    getColumnIndexByName: function($table, candidates) {
+        var _this = this;
+        var index = -1;
+
+        $table.find('thead th').each(function(i) {
+            var text = _this.normalizeText($(this).text());
+            if (candidates.some(function(candidate) { return text === _this.normalizeText(candidate); })) {
+                index = i;
+                return false;
+            }
+        });
+
+        return index;
+    },
+
+    getListDescription: function(title) {
+        var normalized = this.normalizeText(title);
+        var descriptions = [
+            { match: 'pedidos de venda', text: 'Gerencie pedidos, faturamento e entregas com leitura rapida da operacao.' },
+            { match: 'orcamentos de venda', text: 'Acompanhe propostas, conversao em pedido e situacoes que exigem retorno.' },
+            { match: 'pedidos de compra', text: 'Controle compras, recebimentos e prazos dos fornecedores.' },
+            { match: 'orcamentos de compra', text: 'Compare cotacoes e prepare a geracao dos pedidos de compra.' },
+            { match: 'contas a pagar', text: 'Priorize vencimentos, pagamentos e itens que pedem acao imediata.' },
+            { match: 'contas a receber', text: 'Monitore cobrancas, recebimentos e titulos em aberto.' },
+            { match: 'notas', text: 'Acompanhe emissao, situacao fiscal e proximos passos de cada nota.' },
+            { match: 'produtos', text: 'Visualize catalogo, estoque e situacoes que exigem ajuste rapido.' },
+            { match: 'clientes', text: 'Consulte cadastros, documentos e relacionamento comercial.' },
+            { match: 'fornecedores', text: 'Gerencie parceiros, dados fiscais e historico de compras.' },
+            { match: 'transportadoras', text: 'Consulte transportadoras, veiculos e dados logisticos.' },
+            { match: 'usuarios', text: 'Administre acessos, perfis e contas ativas do sistema.' },
+            { match: 'fluxo de caixa', text: 'Leia entradas e saidas com foco em saldo e movimentacoes.' }
+        ];
+
+        for (var i = 0; i < descriptions.length; i += 1) {
+            if (normalized.indexOf(descriptions[i].match) !== -1) {
+                return descriptions[i].text;
+            }
+        }
+
+        return 'Gerencie registros, filtre rapidamente e aja sem perder contexto.';
+    },
+
+    ensureHeaderEnhancement: function($table) {
+        var $card = $table.closest('.card');
+        var $header = $card.find('> form > .header, > .header').first();
+        var $title = $header.find('h2').first();
+        var $actions = $header.find('.header-btn').first();
+        var titleText = $.trim($title.clone().children().remove().end().text());
+        var subtitle = this.getListDescription(titleText);
+
+        if ($title.length && !$title.find('.list-header-copy').length) {
+            $title.html(
+                '<span class="list-header-copy">' +
+                    '<span class="list-header-copy__title">' + titleText + '</span>' +
+                    '<small class="list-header-copy__subtitle">' + subtitle + '</small>' +
+                '</span>'
+            );
+        }
+
+        if ($actions.length && !$actions.find('.js-list-filters-toggle').length) {
+            $('<button type="button" class="btn btn-default js-list-filters-toggle"><i class="material-icons">filter_list</i><span> FILTROS</span></button>').prependTo($actions);
+        }
+
+        if ($actions.length && !$actions.find('.js-list-export').length) {
+            $('<button type="button" class="btn btn-default js-list-export"><i class="material-icons">download</i><span> EXPORTAR</span></button>').prependTo($actions);
+        }
+    },
+
+    getStatusTone: function(value) {
+        var normalized = this.normalizeText(value);
+        if (!normalized) {
+            return 'neutral';
+        }
+        if (normalized.indexOf('atras') !== -1 ||
+            normalized.indexOf('vencid') !== -1 ||
+            normalized.indexOf('rejeitad') !== -1 ||
+            normalized.indexOf('cancelad') !== -1 ||
+            normalized.indexOf('erro') !== -1 ||
+            normalized.indexOf('negad') !== -1) {
+            return 'danger';
+        }
+        if (normalized.indexOf('pend') !== -1 ||
+            normalized.indexOf('aberto') !== -1 ||
+            normalized.indexOf('aguard') !== -1 ||
+            normalized.indexOf('process') !== -1 ||
+            normalized.indexOf('digit') !== -1 ||
+            normalized.indexOf('parcial') !== -1) {
+            return 'warning';
+        }
+        if (normalized.indexOf('fatur') !== -1 ||
+            normalized.indexOf('pago') !== -1 ||
+            normalized.indexOf('receb') !== -1 ||
+            normalized.indexOf('autorizad') !== -1 ||
+            normalized.indexOf('conclu') !== -1 ||
+            normalized.indexOf('ativo') !== -1) {
+            return 'success';
+        }
+        if (normalized.indexOf('emitid') !== -1 || normalized.indexOf('andamento') !== -1) {
+            return 'info';
+        }
+        return 'neutral';
+    },
+
+    getStatusIcon: function(tone) {
+        if (tone === 'danger') {
+            return 'warning';
+        }
+        if (tone === 'warning') {
+            return 'schedule';
+        }
+        if (tone === 'success') {
+            return 'check_circle';
+        }
+        if (tone === 'info') {
+            return 'autorenew';
+        }
+        return 'info';
+    },
+
+    enhanceStatusCells: function($table) {
+        var _this = this;
+        var statusIndex = _this.getColumnIndexByName($table, ['Status']);
+
+        $table.find('tbody tr').each(function() {
+            var $row = $(this);
+            var $cells = $row.children('td');
+
+            if (statusIndex >= 0 && $cells.eq(statusIndex).length) {
+                var $statusCell = $cells.eq(statusIndex);
+                var rawText = $.trim($statusCell.text());
+                var tone = _this.getStatusTone(rawText);
+                $row.attr('data-status-filter', _this.normalizeText(rawText));
+                $statusCell.attr('data-status-raw', rawText);
+                $statusCell.addClass('lista-status-cell');
+                $statusCell.html(
+                    '<span class="list-status-badge list-status-badge--' + tone + '">' +
+                        '<i class="material-icons">' + _this.getStatusIcon(tone) + '</i>' +
+                        '<span>' + rawText + '</span>' +
+                    '</span>'
+                );
+            }
+
+            $cells.each(function() {
+                var $cell = $(this);
+                var text = $.trim($cell.text());
+                if (/^(\d{1,3}(\.\d{3})*,\d{2}|\d+,\d{2})$/.test(text) && !$cell.hasClass('lista-remove') && !$cell.find('.list-status-badge').length) {
+                    $cell.addClass('list-value-cell');
+                    if (text.indexOf('R$') !== 0) {
+                        $cell.text('R$ ' + text);
+                    }
+                }
+            });
+        });
+    },
+
+    injectRowActions: function($table) {
+        var actionHeaderIndex = this.getColumnIndexByName($table, ['Acoes']);
+        var removeHeaderIndex = this.getColumnIndexByName($table, ['Remover']);
+
+        if (actionHeaderIndex === -1) {
+            if (removeHeaderIndex >= 0) {
+                $table.find('thead tr').each(function() {
+                    $('<th>Acoes</th>').insertBefore($(this).children().eq(removeHeaderIndex));
+                });
+            } else {
+                $table.find('thead tr').append('<th>Acoes</th>');
+            }
+        }
+
+        $table.find('tbody tr').each(function() {
+            var $row = $(this);
+            var rowHref = $row.data('href');
+            var $existingActions = $row.children('td.lista-actions');
+            var $removeCheckbox = $row.find('.lista-remove input[type=checkbox]').first();
+
+            if ($existingActions.length) {
+                return;
+            }
+
+            var actionsHtml = '<td class="lista-actions">';
+            if (rowHref) {
+                actionsHtml += '<a href="' + rowHref + '" class="list-row-action prevent-click-row" aria-label="Ver registro" title="Ver"><i class="material-icons">visibility</i></a>';
+                actionsHtml += '<a href="' + rowHref + '" class="list-row-action prevent-click-row" aria-label="Editar registro" title="Editar"><i class="material-icons">edit</i></a>';
+            }
+            if ($removeCheckbox.length) {
+                actionsHtml += '<button type="button" class="list-row-action list-row-action--danger js-toggle-row-delete prevent-click-row" aria-label="Selecionar para remover" title="Selecionar para remover"><i class="material-icons">delete</i></button>';
+            }
+            actionsHtml += '</td>';
+
+            if (removeHeaderIndex >= 0) {
+                $(actionsHtml).insertBefore($row.children('td').eq(removeHeaderIndex));
+            } else {
+                $row.append(actionsHtml);
+            }
+        });
+    },
+
+    enhancePrimaryCells: function($table) {
+        var primaryIndex = this.getColumnIndexByName($table, ['Cliente', 'Fornecedor', 'Descricao', 'Descrição', 'Nome/Razao Social', 'Nome/Razão Social']);
+        if (primaryIndex < 0) {
+            return;
+        }
+
+        $table.find('tbody tr').each(function() {
+            $(this).children('td').eq(primaryIndex).addClass('list-primary-cell');
+        });
+    },
+
+    hideLegacyRemoveColumn: function($table, tableApi) {
+        var removeIndex = this.getColumnIndexByName($table, ['Remover']);
+        if (removeIndex < 0 || !tableApi || !tableApi.column(removeIndex)) {
+            return;
+        }
+        tableApi.column(removeIndex).visible(false, false);
+        tableApi.columns.adjust().draw(false);
+    },
+
+    installStatusFilter: function(tableElement) {
+        var _this = this;
+        if (_this._statusFilterInstalled || !$.fn.dataTable || !$.fn.dataTable.ext) {
+            return;
+        }
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            var selectedStatus = $('#list-status-filter').val();
+            var row = settings.aoData[dataIndex] && settings.aoData[dataIndex].nTr;
+
+            if (!selectedStatus || settings.nTable !== tableElement || !row) {
+                return true;
+            }
+
+            return ($(row).attr('data-status-filter') || '') === selectedStatus;
+        });
+
+        _this._statusFilterInstalled = true;
+    },
+
+    populateStatusFilter: function($table, tableApi) {
+        var $statusWrap = $('#list-status-filter-wrap');
+        var $statusSelect = $('#list-status-filter');
+        var values = [];
+
+        if (!$statusWrap.length || !$statusSelect.length) {
+            return;
+        }
+
+        $table.find('tbody tr').each(function() {
+            var value = $(this).attr('data-status-filter') || '';
+            var label = $.trim($(this).find('td[data-status-raw]').attr('data-status-raw') || '');
+
+            if (value && label && !values.some(function(item) { return item.value === value; })) {
+                values.push({ value: value, label: label });
+            }
+        });
+
+        if (!values.length) {
+            $statusWrap.prop('hidden', true);
+            return;
+        }
+
+        values.sort(function(a, b) {
+            return a.label.localeCompare(b.label);
+        });
+
+        $statusSelect.find('option:not(:first)').remove();
+        values.forEach(function(item) {
+            $statusSelect.append('<option value="' + item.value + '">' + item.label + '</option>');
+        });
+        $statusWrap.prop('hidden', false);
+
+        $statusSelect.off('change.adminTableFilter').on('change.adminTableFilter', function() {
+            tableApi.draw();
+        });
+    },
+
+    renderSummary: function($table, tableApi) {
+        var _this = this;
+        var $summary = $('#list-summary');
+        var counts = {};
+        var total = 0;
+        var activeStatus = $('#list-status-filter').val() || '';
+
+        if (!$summary.length) {
+            return;
+        }
+
+        tableApi.rows({ search: 'applied' }).every(function() {
+            var rowNode = this.node();
+            var status = rowNode ? ($(rowNode).attr('data-status-filter') || '') : '';
+
+            if (!status) {
+                return;
+            }
+
+            counts[status] = (counts[status] || 0) + 1;
+            total += 1;
+        });
+
+        if (!total) {
+            $summary.html('<span class="list-summary__empty">Use a busca ou os filtros para localizar registros.</span>');
+            return;
+        }
+
+        var chips = [
+            '<button type="button" class="list-summary__chip list-summary__chip--all' + (!activeStatus ? ' is-active' : '') + '" data-status-value="">' +
+                '<i class="material-icons">apps</i>' +
+                '<strong>' + total + '</strong>' +
+                '<span>Todos</span>' +
+            '</button>'
+        ];
+
+        chips = chips.concat(Object.keys(counts).sort().map(function(key) {
+            var label = $table.find('tbody tr[data-status-filter="' + key + '"] td[data-status-raw]').first().attr('data-status-raw') || key;
+            var tone = _this.getStatusTone(label);
+            return (
+                '<button type="button" class="list-summary__chip list-summary__chip--' + tone + (activeStatus === key ? ' is-active' : '') + '" data-status-value="' + key + '">' +
+                    '<i class="material-icons">' + _this.getStatusIcon(tone) + '</i>' +
+                    '<strong>' + counts[key] + '</strong>' +
+                    '<span>' + label + '</span>' +
+                '</button>'
+            );
+        }));
+
+        $summary.html(chips.join(''));
+    },
+
+    renderEmptyState: function($table, tableApi) {
+        var $wrapper = $table.closest('.dataTables_wrapper');
+        var $emptyState = $wrapper.next('.list-empty-state');
+        var totalRows = tableApi.rows().count();
+        var filteredRows = tableApi.rows({ search: 'applied' }).count();
+        var $primaryAction = $table.closest('.card').find('.header-btn a.btn-success[href]').first();
+        var ctaHtml = '';
+
+        if (!$emptyState.length) {
+            $emptyState = $('<div class="list-empty-state" hidden></div>');
+            $wrapper.after($emptyState);
+        }
+
+        if ($primaryAction.length) {
+            ctaHtml = '<a class="btn btn-success list-empty-state__cta" href="' + $primaryAction.attr('href') + '">' + $.trim($primaryAction.text()) + '</a>';
+        }
+
+        if (!filteredRows) {
+            $emptyState.html(
+                '<div class="list-empty-state__title">' + (totalRows ? 'Nenhum resultado para os filtros aplicados' : 'Nenhum registro encontrado') + '</div>' +
+                '<div class="list-empty-state__copy">' + (totalRows ? 'Ajuste a busca ou os filtros rapidos para encontrar o que precisa.' : 'Comece criando o primeiro registro desta tela.') + '</div>' +
+                ctaHtml
+            );
+            $emptyState.prop('hidden', false);
+            return;
+        }
+
+        $emptyState.prop('hidden', true).empty();
+    },
+
+    bindToolbarButtons: function($table, tableApi) {
+        var _this = this;
+
+        $('.js-list-filters-toggle').off('click.adminTable').on('click.adminTable', function() {
+            var $filters = $('#list-toolbar-filters');
+            var shouldShow = $filters.prop('hidden');
+            $filters.prop('hidden', !shouldShow);
+            $(this).toggleClass('is-active', shouldShow);
+        });
+
+        $('.js-list-export').off('click.adminTable').on('click.adminTable', function() {
+            var exportIndexes = [];
+            var rows = [];
+            var filename = _this.normalizeText($('.card .header h2').first().text()).replace(/\s+/g, '-') || 'exportacao';
+
+            $table.find('thead th').each(function(index) {
+                var text = _this.normalizeText($(this).text());
+                if (text !== 'remover' && text !== 'acoes') {
+                    exportIndexes.push(index);
+                }
+            });
+
+            rows.push(exportIndexes.map(function(index) {
+                return '"' + $.trim($table.find('thead th').eq(index).text()).replace(/"/g, '""') + '"';
+            }).join(';'));
+
+            tableApi.rows({ search: 'applied' }).every(function() {
+                var $row = $(this.node());
+                rows.push(exportIndexes.map(function(index) {
+                    var $cell = $row.children('td').eq(index);
+                    var text = $.trim($cell.attr('data-status-raw') || $cell.text());
+                    return '"' + text.replace(/"/g, '""') + '"';
+                }).join(';'));
+            });
+
+            var blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        $('body').off('click.adminTableDeleteToggle').on('click.adminTableDeleteToggle', '.js-toggle-row-delete', function(event) {
+            event.preventDefault();
+            var $row = $(this).closest('tr');
+            var $checkbox = $row.find('.lista-remove input[type=checkbox]').first();
+            if ($checkbox.length) {
+                $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+            }
+        });
+
+        $('body').off('click.adminTableQuickStatus').on('click.adminTableQuickStatus', '.list-summary__chip[data-status-value]', function(event) {
+            event.preventDefault();
+            $('#list-status-filter').val($(this).data('statusValue') || '').trigger('change');
+        });
+    },
 
     syncRemoveButton: function() {
         var $btnRemove = $('.btn-remove');
@@ -432,26 +856,33 @@ $.Admin.table = {
         }
 
         _this.registerDateSort();
+        _this.ensureHeaderEnhancement($table);
+        _this.injectRowActions($table);
+        _this.enhanceStatusCells($table);
+        _this.enhancePrimaryCells($table);
+        _this.installStatusFilter($table[0]);
 
         dTable = $.fn.DataTable.isDataTable($table[0]) ? $table.DataTable() : $table.DataTable({
             "dom" : 'ltipr',
+            "pageLength" : 25,
+            "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
             "language" : {
                 "sEmptyTable": "Nenhum registro encontrado",
-                "sInfo": "Mostrando de _START_ atÃ© _END_ de _TOTAL_ registros",
-                "sInfoEmpty": "Mostrando 0 atÃ© 0 de 0 registros",
+                "sInfo": "Mostrando de _START_ ate _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 ate 0 de 0 registros",
                 "sInfoFiltered": "(Filtrados de _MAX_ registros)",
                 "sInfoPostFix": "",
                 "sInfoThousands": ".",
-                "sLengthMenu": "Mostrar _MENU_ resultados por pÃ¡gina",
+                "sLengthMenu": "Mostrar _MENU_ resultados por pagina",
                 "sLoadingRecords": "Carregando...",
                 "sProcessing": "Processando...",
                 "sZeroRecords": "Nenhum registro encontrado",
                 "sSearch": "Pesquisar",
                 "oPaginate": {
-                    "sNext": "PrÃ³ximo",
+                    "sNext": "Proximo",
                     "sPrevious": "Anterior",
                     "sFirst": "Primeiro",
-                    "sLast": "Ãšltimo"
+                    "sLast": "Ultimo"
                 },
                 "oAria": {
                     "sSortAscending": ": Ordenar colunas de forma ascendente",
@@ -476,19 +907,28 @@ $.Admin.table = {
         $btnRemove.off('click.adminTable').on('click.adminTable',function(event){
             event.preventDefault();
             var form = $(this).parents('form');
-            $.Admin.messages.msgRemove("Os items selecionados serÃ£o removidos permanentemente da Base de Dados.");
+            $.Admin.messages.msgRemove("Os itens selecionados serao removidos permanentemente da base de dados.");
             $('#btn-sim').one('click', function(){
                 form.submit();
             });
         });
 
         $('body').off('click.adminTableRow').on('click.adminTableRow', '.clickable-row:not(.popup)', function(event){
-            if(!$(event.target).is("input, label, i, .prevent-click-row")){
+            if(!$(event.target).is("input, label, i, .prevent-click-row, button")){
                 window.document.location = $(this).data("href");
             }
         });
 
         _this.rebuildTableFooter($table, dTable);
+        _this.populateStatusFilter($table, dTable);
+        _this.bindToolbarButtons($table, dTable);
+        _this.hideLegacyRemoveColumn($table, dTable);
+        _this.renderSummary($table, dTable);
+        _this.renderEmptyState($table, dTable);
+        dTable.on('draw', function() {
+            _this.renderSummary($table, dTable);
+            _this.renderEmptyState($table, dTable);
+        });
         _this.syncRemoveButton();
     },
 }
@@ -785,25 +1225,18 @@ $.Admin.maskInput = {
 $.Admin.pessoaForm = {
     init: function(cmun_path, mun_inicial) {
         var _this = this;
+        _this.cmun_path = cmun_path;
         _this.trocarCampos();
+        _this.initCnpjLookup();
 
         $('input[type="radio"][name$="tipo_pessoa"]').change(function(){
             _this.trocarCampos($(this));
         });
 
         $('.formset').on('change', 'select[id$=-uf]', function(event, mun_inicial){
-            var form_number = $(this).prop('id').match(/\d/)[0];
+            var form_number = ($(this).prop('id').match(/\d+/) || [0])[0];
             var mun_input = $("#id_endereco_form-" + form_number + "-municipio");
-            mun_input.empty();
-            if($(this).val() && $(this).val() != 'EX'){
-                file_path = cmun_path + $(this).val() + '.csv'
-                $.ajax({
-                    type: "GET",
-                    url: file_path,
-                    dataType: "text",
-                    success: function(data){_this.processCmunData(data, mun_input, mun_inicial);}
-                });
-            }
+            _this.loadMunicipios($(this).val(), mun_input, mun_inicial);
         });
 
         if(mun_inicial.length){
@@ -855,9 +1288,127 @@ $.Admin.pessoaForm = {
         }
         if(mun_inicial){
             mun_input.val(mun_inicial);
-        }else{
-            mun_input.change();
         }
+        mun_input.change();
+    },
+
+    loadMunicipios: function(uf, mun_input, mun_inicial){
+        var _this = this;
+        mun_input.empty();
+        if(uf && uf != 'EX'){
+            var file_path = _this.cmun_path + uf + '.csv';
+            $.ajax({
+                type: "GET",
+                url: file_path,
+                dataType: "text",
+                success: function(data){ _this.processCmunData(data, mun_input, mun_inicial); }
+            });
+        }
+    },
+
+    initCnpjLookup: function(){
+        var _this = this;
+
+        $('body').on('click', '.js-cnpj-lookup', function(event){
+            event.preventDefault();
+            event.stopPropagation();
+            _this.lookupCnpj($(this));
+        });
+
+        $('body').on('keydown keypress', 'input[data-cnpj-lookup-field="cnpj"]', function(event){
+            if(event.key === 'Enter' || event.which === 13){
+                event.preventDefault();
+                event.stopPropagation();
+                $(this).closest('.cnpj-lookup-group').find('.js-cnpj-lookup').trigger('click');
+                return false;
+            }
+        });
+    },
+
+    lookupCnpj: function(button){
+        var _this = this;
+        var form = button.closest('form');
+        var cnpjInput = form.find('input[data-cnpj-lookup-field="cnpj"]:visible').first();
+        var cnpj = (cnpjInput.val() || '').replace(/\D/g, '');
+
+        if(cnpj.length !== 14){
+            if(window.AppCore && window.AppCore.messages){
+                window.AppCore.messages.alert('Informe um CNPJ valido com 14 digitos.');
+            }
+            cnpjInput.focus();
+            return;
+        }
+
+        button.prop('disabled', true).addClass('is-loading');
+        if(window.AppCore && window.AppCore.loader){
+            window.AppCore.loader.show('Consultando CNPJ...');
+        }
+
+        $.ajax({
+            url: button.data('lookupUrl'),
+            type: 'GET',
+            dataType: 'json',
+            data: {cnpj: cnpj},
+            success: function(response){
+                if(!response || !response.success || !response.data){
+                    if(window.AppCore && window.AppCore.messages){
+                        window.AppCore.messages.alert((response && response.error) || 'Nao foi possivel consultar o CNPJ informado.');
+                    }
+                    return;
+                }
+
+                _this.applyCnpjData(form, response.data);
+                if(window.AppCore && window.AppCore.messages){
+                    window.AppCore.messages.success('Dados da empresa preenchidos a partir do CNPJ.');
+                }
+            },
+            error: function(xhr){
+                var response = xhr.responseJSON || {};
+                if(window.AppCore && window.AppCore.messages){
+                    window.AppCore.messages.alert(response.error || 'Nao foi possivel consultar o CNPJ informado.');
+                }
+            },
+            complete: function(){
+                button.prop('disabled', false).removeClass('is-loading');
+                if(window.AppCore && window.AppCore.loader){
+                    window.AppCore.loader.hide();
+                }
+            }
+        });
+    },
+
+    applyCnpjData: function(form, data){
+        this.setFieldValue(form, 'input[name$="nome_razao_social"]', data.nome_razao_social);
+        this.setFieldValue(form, 'input[name$="nome_fantasia"]', data.nome_fantasia);
+        this.setFieldValue(form, 'input[data-cnpj-lookup-field="cnpj"]', data.cnpj);
+        this.setFieldValue(form, 'input[name$="responsavel"]', data.responsavel);
+
+        this.setFieldValue(form, 'input[name="endereco_form-0-logradouro"]', data.logradouro);
+        this.setFieldValue(form, 'input[name="endereco_form-0-numero"]', data.numero);
+        this.setFieldValue(form, 'input[name="endereco_form-0-bairro"]', data.bairro);
+        this.setFieldValue(form, 'input[name="endereco_form-0-complemento"]', data.complemento);
+        this.setFieldValue(form, 'input[name="endereco_form-0-cep"]', data.cep);
+        this.setFieldValue(form, 'input[name="endereco_form-0-pais"]', data.pais || 'Brasil');
+        this.setFieldValue(form, 'input[name="endereco_form-0-cpais"]', '1058');
+        this.setFieldValue(form, 'input[name="telefone_form-0-telefone"]', data.telefone);
+        this.setFieldValue(form, 'input[name="email_form-0-email"]', data.email);
+
+        var ufInput = form.find('select[name="endereco_form-0-uf"]').first();
+        var munInput = form.find('select[name="endereco_form-0-municipio"]').first();
+
+        if(ufInput.length && data.uf){
+            ufInput.val(data.uf).trigger('change', [data.municipio]);
+        }else if(munInput.length && data.municipio){
+            munInput.val(data.municipio).trigger('change');
+        }
+    },
+
+    setFieldValue: function(form, selector, value){
+        var field = form.find(selector).first();
+        if(!field.length || value === null || typeof value === 'undefined' || value === ''){
+            return;
+        }
+        field.val(value).trigger('change');
     },
 }
 
@@ -999,7 +1550,7 @@ $.Admin.grupoFiscalForm = {
     escondeCamposRegime: function (regimeField) {
         var fieldValue = regimeField.find(":selected").val();
 
-        //Simples nacional==1 ou tributação normal==0
+        //Simples nacional==1 ou tributaÃ§Ã£o normal==0
         if(fieldValue == '1'){
             $('.icmssn_form').show();
             $('.icms_form').hide();
@@ -1412,7 +1963,7 @@ $.Admin.vendaForm = {
         $('#id_rateio_despesas_modal').val(despesas.val());
         $('#id_rateio_seguro_modal').val(seguro.val());
 
-        //Cálculo
+        //CÃ¡lculo
         $('#id_ipi_incluso_modal').prop('checked', prod_formset.find('input[id$=-ipi_incluido_preco]').is(":checked"));
         $('#id_icms_incluso_modal').prop('checked', prod_formset.find('input[id$=-icms_incluido_preco]').is(":checked"));
         $('#id_icmsst_incluso_modal').prop('checked', prod_formset.find('input[id$=-icmsst_incluido_preco]').is(":checked"));
@@ -1520,7 +2071,7 @@ $.Admin.vendaForm = {
                 if(isNaN(despesas_item)) despesas_item = '0.00';
                 if(isNaN(seguro_item)) seguro_item = '0.00';
 
-                //Subtrair valores já preenchidos
+                //Subtrair valores jÃ¡ preenchidos
                 vtotal_s = parseFloat(vtotal_s) - parseFloat(frete_item) - parseFloat(despesas_item) - parseFloat(seguro_item);
                 var percentual_do_total = 0;
                 if(parseFloat(total_sem_adicionais) > 0){
@@ -1859,7 +2410,7 @@ $.Admin.vendaForm = {
             }
         });
 
-        //Subtrair adicionais (frete, despesas e seguro), do valor total, para não somar duas vezes
+        //Subtrair adicionais (frete, despesas e seguro), do valor total, para nÃ£o somar duas vezes
         $('input[id$=-valor_rateio_frete]:visible,input[id$=-valor_rateio_despesas]:visible,input[id$=-valor_rateio_seguro]:visible').each(function(){
             var vrateio = parseFloat($(this).val().replace(/\./g,'').replace(',','.')).toFixed(2);
             if(!isNaN(vrateio)){
@@ -2127,9 +2678,9 @@ $.Admin.vendaForm = {
                     if(ind_ie == '1'){
                         $('#ind_ie_cliente').text('Contribuinte ICMS');
                     }else if(ind_ie == '2'){
-                        $('#ind_ie_cliente').text('Contribuinte isento de Inscrição');
+                        $('#ind_ie_cliente').text('Contribuinte isento de InscriÃ§Ã£o');
                     }else if(ind_ie == '9'){
-                        $('#ind_ie_cliente').text('Não Contribuinte');
+                        $('#ind_ie_cliente').text('NÃ£o Contribuinte');
                     }
                 }
 
@@ -2313,7 +2864,7 @@ $.Admin.compraForm = {
         //Rateio
         $('#id_rateio_desconto_modal').val(parseFloat(parseFloat(subtotal_s.val().replace(/\./g,'').replace(',','.')) - parseFloat(subtotal.val().replace(/\./g,'').replace(',','.'))).toFixed(2).replace(/\./g,','));
 
-        //Cálculo
+        //CÃ¡lculo
         $('#id_ipi_incluso_modal').prop('checked', prod_formset.find('input[id$=-ipi_incluido_preco]').is(":checked"));
         $('#id_icms_incluso_modal').prop('checked', prod_formset.find('input[id$=-icms_incluido_preco]').is(":checked"));
         $('#id_ipi_bc_icms_modal').prop('checked', prod_formset.find('input[id$=-incluir_bc_icms]').is(":checked"));
@@ -2859,7 +3410,7 @@ $.Admin.movimentoEstoqueForm = {
                     estoque_atual_input.val(data[0].fields.estoque_atual.replace(/\./g,','));
                     estoque_atual_input.removeClass('input_no_edit');
                 }else{
-                    estoque_atual_input.val('Não controlado');
+                    estoque_atual_input.val('NÃ£o controlado');
                     estoque_atual_input.addClass('input_no_edit');
                 }
             }
@@ -3078,7 +3629,7 @@ $.Admin.notaFiscalForm = {
 
         $('form[id=inutilizar_notas_form]').on('submit', function(){
             $('.page-loader-wrapper').show();
-            $('.loader .loader-message').text('Inutilizando numeração de notas, aguarde...');
+            $('.loader .loader-message').text('Inutilizando numeraÃ§Ã£o de notas, aguarde...');
         });
 
         $('form[id=consultar_nota_form]').on('submit', function(){
@@ -3093,7 +3644,7 @@ $.Admin.notaFiscalForm = {
 
         $('form[id=manifestacao_destinatario_form]').on('submit', function(){
             $('.page-loader-wrapper').show();
-            $('.loader .loader-message').text('Enviando manifestação do destinatário, aguarde...');
+            $('.loader .loader-message').text('Enviando manifestaÃ§Ã£o do destinatÃ¡rio, aguarde...');
         });
 
     },
@@ -3155,9 +3706,9 @@ $.Admin.notaFiscalForm = {
                     if(ind_ie == '1'){
                         $('#ind_ie_dest').text('Contribuinte ICMS');
                     }else if(ind_ie == '2'){
-                        $('#ind_ie_dest').text('Contribuinte isento de Inscrição');
+                        $('#ind_ie_dest').text('Contribuinte isento de InscriÃ§Ã£o');
                     }else if(ind_ie == '9'){
-                        $('#ind_ie_dest').text('Não Contribuinte');
+                        $('#ind_ie_dest').text('NÃ£o Contribuinte');
                     }
                     if(data[i].fields.id_estrangeiro){
                         $('#cpf_cnpj_id_dest').text(data[i].fields.id_estrangeiro);
@@ -3447,12 +3998,12 @@ $.Admin.datepicker = {
     init: function(cookieName){
         $( ".datepicker" ).datepicker({
             dateFormat: 'dd/mm/yy',
-            dayNames: ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],
+            dayNames: ['Domingo','Segunda','TerÃ§a','Quarta','Quinta','Sexta','SÃ¡bado'],
             dayNamesMin: ['D','S','T','Q','Q','S','S','D'],
-            dayNamesShort: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],
-            monthNames: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+            dayNamesShort: ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b','Dom'],
+            monthNames: ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
             monthNamesShort: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
-            nextText: 'Próximo',
+            nextText: 'PrÃ³ximo',
             prevText: 'Anterior'
         });
     },
@@ -3526,3 +4077,5 @@ $(function () {
     $.Admin.formset.init();
     $.Admin.validation.init();
 });
+
+

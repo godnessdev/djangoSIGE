@@ -297,6 +297,173 @@
         });
     }
 
+    function initShellSearch() {
+        var searchForm = document.getElementById('global-nav-search');
+        var searchInput = document.getElementById('global-nav-search-input');
+        var payloadNode = document.getElementById('shell-search-items');
+        var searchItems = [];
+
+        if (!searchForm || !searchInput || !payloadNode) {
+            return;
+        }
+
+        try {
+            searchItems = JSON.parse(payloadNode.textContent || '[]');
+        } catch (error) {
+            searchItems = [];
+        }
+
+        function normalize(text) {
+            return String(text || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+        }
+
+        function findBestMatch(term) {
+            var normalizedTerm = normalize(term);
+            if (!normalizedTerm) {
+                return null;
+            }
+
+            var exactMatch = searchItems.find(function (item) {
+                return normalize(item.label) === normalizedTerm;
+            });
+
+            if (exactMatch) {
+                return exactMatch;
+            }
+
+            return searchItems.find(function (item) {
+                return normalize(item.label).indexOf(normalizedTerm) !== -1 ||
+                    normalize(item.keywords).indexOf(normalizedTerm) !== -1;
+            }) || null;
+        }
+
+        searchForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var match = findBestMatch(searchInput.value);
+            if (match && match.href) {
+                window.location.href = match.href;
+                return;
+            }
+            window.AppCore.messages.alert('Nenhum resultado encontrado para a busca global.');
+        });
+    }
+
+    function initPriceLookup() {
+        var form = document.getElementById('topbar-price-search-form');
+        var input = document.getElementById('topbar-price-search-input');
+        var resultsNode = document.getElementById('topbar-price-search-results');
+        var statusNode = document.getElementById('topbar-price-search-status');
+        var debounceTimer = null;
+        var currentController = null;
+
+        if (!form || !input || !resultsNode || !statusNode) {
+            return;
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setStatus(message, tone) {
+            statusNode.textContent = message;
+            statusNode.dataset.tone = tone || 'neutral';
+        }
+
+        function renderResults(items) {
+            if (!items.length) {
+                resultsNode.innerHTML = '';
+                setStatus('Nenhum produto encontrado para esse inicio.', 'neutral');
+                return;
+            }
+
+            resultsNode.innerHTML = items.map(function (item) {
+                var meta = [];
+                if (item.codigo) {
+                    meta.push('Cod. ' + escapeHtml(item.codigo));
+                }
+                if (item.unidade) {
+                    meta.push('Un. ' + escapeHtml(item.unidade));
+                }
+                if (item.estoque) {
+                    meta.push('Estoque ' + escapeHtml(item.estoque));
+                }
+
+                return (
+                    '<a class="price-lookup-result" href="' + escapeHtml(item.edit_url || '#') + '">' +
+                        '<span class="price-lookup-result__main">' +
+                            '<strong>' + escapeHtml(item.descricao) + '</strong>' +
+                            '<small>' + meta.join(' • ') + '</small>' +
+                        '</span>' +
+                        '<span class="price-lookup-result__price">' + escapeHtml(item.preco) + '</span>' +
+                    '</a>'
+                );
+            }).join('');
+            setStatus(items.length + ' produto(s) encontrado(s).', 'success');
+        }
+
+        function fetchResults(term) {
+            var searchUrl = resultsNode.dataset.searchUrl;
+            if (!searchUrl) {
+                return;
+            }
+
+            if (currentController) {
+                currentController.abort();
+            }
+            currentController = window.AbortController ? new AbortController() : null;
+            resultsNode.innerHTML = '';
+            setStatus('Buscando precos...', 'loading');
+
+            window.fetch(searchUrl + '?term=' + encodeURIComponent(term), {
+                credentials: 'same-origin',
+                signal: currentController ? currentController.signal : undefined
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error('request_failed');
+                }
+                return response.json();
+            }).then(function (payload) {
+                renderResults(payload.results || []);
+            }).catch(function (error) {
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
+                resultsNode.innerHTML = '';
+                setStatus('Nao foi possivel consultar os precos agora.', 'error');
+            });
+        }
+
+        function queueSearch() {
+            var term = (input.value || '').trim();
+            window.clearTimeout(debounceTimer);
+
+            if (term.length < 2) {
+                resultsNode.innerHTML = '';
+                setStatus('Digite pelo menos 2 letras.', 'neutral');
+                return;
+            }
+
+            debounceTimer = window.setTimeout(function () {
+                fetchResults(term);
+            }, 180);
+        }
+
+        input.addEventListener('input', queueSearch);
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            queueSearch();
+        });
+    }
+
     function getMessageElements() {
         return {
             body: document.querySelector('#modal-msg .modal-body p'),
@@ -399,6 +566,8 @@
         bindGlobalInteractions();
         checkStatusForResize(true);
         markMenuActive();
+        initShellSearch();
+        initPriceLookup();
         annotateFieldActions();
         annotateDateFields();
         window.setTimeout(loader.hide, 50);

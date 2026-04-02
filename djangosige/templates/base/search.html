@@ -1,8 +1,21 @@
-<div class="input-group toolbar-search" role="search" aria-label="Busca da lista">
-  <span class="input-group-addon" aria-hidden="true">
-    <i class="material-icons">&#xE8B6;</i>
-  </span>
-  <div class="form-line">
-    <input type="search" id="search-bar" class="form-control line-input" placeholder="Buscar registros" autocomplete="off" aria-label="Buscar registros">
+<div class="list-toolbar-shell">
+  <div class="input-group toolbar-search" role="search" aria-label="Busca da lista">
+    <span class="input-group-addon" aria-hidden="true">
+      <i class="material-icons">&#xE8B6;</i>
+    </span>
+    <div class="form-line">
+      <input type="search" id="search-bar" class="form-control line-input" placeholder="Buscar registros" autocomplete="off" aria-label="Buscar registros">
+    </div>
   </div>
+
+  <div class="list-toolbar-filters" id="list-toolbar-filters" hidden>
+    <label class="list-filter-field" id="list-status-filter-wrap" hidden>
+      <span>Status</span>
+      <select id="list-status-filter" class="form-control">
+        <option value="">Todos os status</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="list-summary" id="list-summary" aria-live="polite"></div>
 </div>
