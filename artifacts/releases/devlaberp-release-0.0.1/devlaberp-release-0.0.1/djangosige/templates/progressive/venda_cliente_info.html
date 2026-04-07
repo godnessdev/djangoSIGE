@@ -1,0 +1,117 @@
+<div id="cliente-info-panel" class="progressive-info-panel" x-data="{ loading: false }"
+     @htmx:before-request.window="if ($event.detail.elt && $event.detail.elt.id === 'id_cliente') loading = true"
+     @htmx:after-swap.window="if ($event.detail.target.id === 'cliente-info-panel') loading = false"
+     @htmx:response-error.window="if ($event.detail.target.id === 'cliente-info-panel') loading = false">
+  <p class="progressive-info-status is-loading" x-cloak x-show="loading">Carregando dados do cliente...</p>
+  {% if not summary %}
+  <p class="progressive-info-empty">Selecione um cliente para carregar os dados complementares.</p>
+  {% endif %}
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Limite de crédito</label>
+        <span class="form-control display-cliente-field" id="limite_credito_cliente">{{ summary.limite_credito|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Indicador da IE</label>
+        <span class="form-control display-cliente-field" id="ind_ie_cliente">{{ summary.indicador_ie|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>CPF/CNPJ</label>
+        <span class="form-control display-cliente-field" id="cpf_cnpj_cliente">{{ summary.documento|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Inscrição estadual/RG</label>
+        <span class="form-control display-cliente-field" id="ie_rg_cliente">{{ summary.inscricao|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Representante</label>
+        <span class="form-control display-cliente-field" id="representante_cliente">{{ summary.representante|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Endereço</label>
+        <span class="form-control display-cliente-field" id="endereco_cliente">{{ summary.endereco|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Bairro</label>
+        <span class="form-control display-cliente-field" id="bairro_cliente">{{ summary.bairro|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Município</label>
+        <span class="form-control display-cliente-field" id="municipio_cliente">{{ summary.municipio|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>UF</label>
+        <span class="form-control display-cliente-field" id="uf_cliente">{{ summary.uf|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>CEP</label>
+        <span class="form-control display-cliente-field" id="cep_cliente">{{ summary.cep|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Email</label>
+        <span class="form-control display-cliente-field" id="email_cliente">{{ summary.email|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Telefone</label>
+        <span class="form-control display-cliente-field" id="telefone_cliente">{{ summary.telefone|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+</div>

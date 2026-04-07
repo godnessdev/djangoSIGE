@@ -1,0 +1,30 @@
+{% block js %}
+
+  {% load static %}
+  {% include 'base/load_jquery_mask.html' %}
+  {% include 'base/load_jqueryui.html' %}
+  {% include 'base/tooltip_js.html' %}
+
+  <script type="text/javascript">
+    $.Admin.maskInput.maskEmpresa();
+
+    (function() {
+      function toggleEmpresaPaiField() {
+        var tipoField = document.querySelector('[name$="tipo_empresa"]');
+        var empresaPaiWrapper = document.getElementById('empresa-pai-wrapper');
+
+        if (!tipoField || !empresaPaiWrapper) {
+          return;
+        }
+
+        empresaPaiWrapper.style.display = tipoField.value === 'FIL' ? 'block' : 'none';
+      }
+
+      $(document).ready(function() {
+        toggleEmpresaPaiField();
+        $(document).on('change', '[name$="tipo_empresa"]', toggleEmpresaPaiField);
+      });
+    })();
+  </script>
+
+{% endblock %}

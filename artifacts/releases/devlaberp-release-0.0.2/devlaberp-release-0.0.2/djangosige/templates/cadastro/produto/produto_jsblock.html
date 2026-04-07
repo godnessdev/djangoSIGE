@@ -1,0 +1,18 @@
+﻿{% load static %}
+<!-- JQuery Mask Input Js -->
+{% include 'base/load_jquery_mask.html' %}
+
+<!-- JQueryUI autocomplete -->
+  {% include 'base/load_jqueryui.html' %}
+
+{% include 'base/tooltip_js.html' %}
+
+<script type="text/javascript">
+    var ncm_path = '{% static 'tabelas/ncm/ncm171a.csv' %}'
+    var cest_path = '{% static 'tabelas/cest/cest.csv' %}'
+    $.Admin.produtoForm.init(ncm_path);
+    $.Admin.autocompleteField.autocompleteCest(cest_path);
+    $.Admin.maskInput.maskProduto();
+
+</script>
+

@@ -1,44 +1,176 @@
-Watching for file changes with StatReloader
-[02/Apr/2026 16:40:43] "GET / HTTP/1.1" 302 0
-[02/Apr/2026 16:40:43] "GET /login/ HTTP/1.1" 200 5779
-[02/abr/2026 16:40:43,427] - Broken pipe from ('127.0.0.1', 63664)
-[02/Apr/2026 16:41:08] "GET / HTTP/1.1" 200 41245
-[02/Apr/2026 16:41:08] "GET /static/css/theme-overrides.css?v=20260402d HTTP/1.1" 304 0
-[02/Apr/2026 16:41:08] "GET /static/js/admin.js?v=20260402d HTTP/1.1" 304 0
-[02/Apr/2026 16:41:33] "GET /vendas/pedidovenda/listapedidovenda/ HTTP/1.1" 200 82729
-[02/abr/2026 16:41:34,517] - Broken pipe from ('127.0.0.1', 53352)
-[02/Apr/2026 16:41:38] "GET /vendas/orcamentovenda/listaorcamentovenda/ HTTP/1.1" 200 26483
-[02/Apr/2026 16:41:41] "GET /vendas/orcamentovenda/listaorcamentovenda/ HTTP/1.1" 200 26483
-[02/Apr/2026 16:41:47] "GET /fiscal/notafiscal/saida/listanotafiscal/ HTTP/1.1" 200 28326
-[02/abr/2026 16:42:09,298] - Broken pipe from ('127.0.0.1', 64953)
-[02/abr/2026 16:42:31,725] - Broken pipe from ('127.0.0.1', 56521)
-[02/Apr/2026 16:42:45] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 2152632
-[02/Apr/2026 16:42:45] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 304 0
-[02/abr/2026 16:44:13,739] - Broken pipe from ('127.0.0.1', 63206)
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\base\custom_views.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\cliente.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\fornecedor.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\produto.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\vendas\views\vendas.py changed, reloading.
-Watching for file changes with StatReloader
-[02/Apr/2026 16:48:04] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 68215
-[02/Apr/2026 16:48:07] "GET /cadastro/produto/listaprodutos/ HTTP/1.1" 200 74518
-[02/Apr/2026 16:48:08] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 68215
-[02/Apr/2026 16:48:21] "GET /cadastro/produto/listaprodutos/ HTTP/1.1" 200 74518
-[02/Apr/2026 16:48:25] "GET / HTTP/1.1" 200 41245
-[02/Apr/2026 16:48:29] "GET /financeiro/fluxodecaixa/ HTTP/1.1" 200 27353
-C:\Users\lojac\OneDrive\Documentos\GitHub\devlab-system\djangosige\apps\cadastro\views\produto.py changed, reloading.
-Watching for file changes with StatReloader
-[02/Apr/2026 16:48:33] "GET /financeiro/planodecontas/ HTTP/1.1" 200 27251
-[02/Apr/2026 16:48:39] "GET /financeiro/planodecontas/ HTTP/1.1" 200 27251
-[02/abr/2026 16:48:54,622] - Broken pipe from ('127.0.0.1', 59069)
-[02/Apr/2026 16:48:54] "GET /cadastro/empresa/editar/36/ HTTP/1.1" 200 57311
-[02/Apr/2026 16:48:54] "GET /static/tabelas/municipios/SP.csv HTTP/1.1" 200 13279
-[02/abr/2026 16:49:30,093] - Broken pipe from ('127.0.0.1', 58728)
-[02/abr/2026 16:49:38,978] - Broken pipe from ('127.0.0.1', 60078)
-[02/abr/2026 16:50:04,335] - Broken pipe from ('127.0.0.1', 60698)
-[02/abr/2026 16:50:05,593] - Broken pipe from ('127.0.0.1', 53877)
+[04/Apr/2026 11:36:31] "GET /login/ HTTP/1.1" 200 10725
+[04/abr/2026 11:36:31,220] - Broken pipe from ('127.0.0.1', 55191)
+[04/Apr/2026 11:37:18] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:18] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:18] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:18] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:18] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:18] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:18] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:18] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:18] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:18] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:18] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:18] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:18] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:18] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:19] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:19] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:19] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:19] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:19] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:19] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:19] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:19] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:19] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:19] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:19] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:19] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:19] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:19] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:19] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:19] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:19] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:19] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:19] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:19] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:19] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:19] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:19] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:19] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:19] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:19] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:19] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:19] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:20] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:20] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:20] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:20] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:20] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:20] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:20] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:20] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:20] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:20] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:20] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:20] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:20] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:20] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:20] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:20] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:20] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:20] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:20] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:20] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:20] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:20] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:20] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:20] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:20] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:20] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:20] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:20] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:20] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:20] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:20] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:20] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:20] "GET /login/ HTTP/1.1" 200 10725
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap-compat.css?v=20260401c HTTP/1.1" 200 2832
+[04/Apr/2026 11:37:20] "GET /static/css/style.css?v=20260401c HTTP/1.1" 200 41975
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/htmx.min.js?v=20260401c HTTP/1.1" 200 51250
+[04/Apr/2026 11:37:20] "GET /static/js/jquery/jquery-3.0.0.min.js?v=20260401c HTTP/1.1" 200 87533
+[04/Apr/2026 11:37:20] "GET /static/js/app-core.js?v=20260402a HTTP/1.1" 200 19862
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap-compat.js?v=20260401c HTTP/1.1" 200 8329
+[04/Apr/2026 11:37:20] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:37:20] "GET /static/js/bootstrap/bootstrap.min.js?v=20260401c HTTP/1.1" 200 80721
+[04/Apr/2026 11:37:20] "GET /static/js/progressive-enhancement.js?v=20260401c HTTP/1.1" 200 8521
+[04/Apr/2026 11:37:20] "GET /static/css/bootstrap.min.css?v=20260401c HTTP/1.1" 200 232803
+[04/Apr/2026 11:37:20] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:37:20] "GET /static/js/vendor/alpine.min.js?v=20260401c HTTP/1.1" 200 46225
+[04/Apr/2026 11:37:20] "GET /static/css/iconfont/MaterialIcons-Regular.woff2 HTTP/1.1" 200 44300
+[04/Apr/2026 11:37:42] "GET /login/consultacnpj/?cnpj=14937420000103 HTTP/1.1" 200 436
+[04/Apr/2026 11:37:46] "POST /login/ HTTP/1.1" 302 0
+[04/Apr/2026 11:37:46] "GET /login/ HTTP/1.1" 200 9792
+[04/Apr/2026 11:37:46] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:38:02] "POST /login/ HTTP/1.1" 302 0
+[04/Apr/2026 11:38:02] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:38:02] "GET /media/imagens/user.png HTTP/1.1" 200 2587
+[04/Apr/2026 11:38:07] "GET /login/perfil/ HTTP/1.1" 200 24559
+[04/Apr/2026 11:38:07] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:38:10] "GET /financeiro/contareceber/listacontareceber/ HTTP/1.1" 200 27914
+[04/Apr/2026 11:38:10] "GET /static/css/jquery-ui/jquery-ui.min.css HTTP/1.1" 200 19970
+[04/Apr/2026 11:38:10] "GET /static/js/jquery-ui.min.js HTTP/1.1" 200 74281
+[04/Apr/2026 11:38:10] "GET /static/js/jquery.mask.js HTTP/1.1" 200 20662
+[04/Apr/2026 11:38:16] "GET /estoque/consultaestoque/ HTTP/1.1" 200 26842
+[04/Apr/2026 11:38:23] "GET /vendas/pedidovenda/listapedidovenda/ HTTP/1.1" 200 26048
+[04/Apr/2026 11:38:23] "GET /static/js/jquery.dataTables.min.js?v=20260401c HTTP/1.1" 200 83226
+[04/Apr/2026 11:38:26] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:38:34] "GET /login/logout/ HTTP/1.1" 302 0
+[04/Apr/2026 11:38:34] "GET /login/ HTTP/1.1" 200 6333
+[04/Apr/2026 11:38:34] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:38:36] "GET /login/esqueceu/ HTTP/1.1" 200 5125
+[04/Apr/2026 11:38:42] "GET /login/ HTTP/1.1" 200 6333
+[04/Apr/2026 11:38:50] "POST /login/ HTTP/1.1" 302 0
+[04/Apr/2026 11:38:50] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:39:18] "GET /cadastro/empresa/editar/1/ HTTP/1.1" 200 56802
+[04/Apr/2026 11:39:18] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:39:18] "GET /media/imagens/user.png HTTP/1.1" 200 2587
+[04/Apr/2026 11:39:18] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:39:27] "POST /cadastro/empresa/editar/1/ HTTP/1.1" 302 0
+[04/Apr/2026 11:39:27] "GET /cadastro/empresa/listaempresas/ HTTP/1.1" 200 26594
+[04/Apr/2026 11:39:29] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:39:33] "GET /cadastro/empresa/editar/1/ HTTP/1.1" 200 56801
+[04/Apr/2026 11:39:36] "GET /cadastro/cliente/listaclientes/ HTTP/1.1" 200 24816
+[04/Apr/2026 11:39:39] "GET /cadastro/produto/listaprodutos/ HTTP/1.1" 200 24854
+[04/Apr/2026 11:39:40] "GET /login/usuarios/ HTTP/1.1" 200 25232
+[04/Apr/2026 11:39:43] "GET /login/usuarios/1/ HTTP/1.1" 200 24590
+[04/Apr/2026 11:39:48] "GET /cadastro/consultaprecoproduto/?term=Pr HTTP/1.1" 200 32
+[04/Apr/2026 11:39:48] "GET /cadastro/consultaprecoproduto/?term=Prd HTTP/1.1" 200 32
+[04/Apr/2026 11:39:49] "GET /cadastro/consultaprecoproduto/?term=Test HTTP/1.1" 200 32
+[04/Apr/2026 11:42:53] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:42:53] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:42:53] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:42:56] "GET /cadastro/empresa/editar/1/ HTTP/1.1" 200 56801
+[04/Apr/2026 11:42:58] "GET /static/icons/remove-icon.svg HTTP/1.1" 200 395
+[04/Apr/2026 11:57:24] "GET /vendas/pedidovenda/listapedidovenda/ HTTP/1.1" 302 0
+[04/Apr/2026 11:57:24] "GET /login/ HTTP/1.1" 200 6333
+[04/Apr/2026 11:57:24] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 200 83414
+[04/Apr/2026 11:57:24] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 200 191439
+[04/Apr/2026 11:57:31] "POST /login/ HTTP/1.1" 302 0
+[04/Apr/2026 11:57:31] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:57:31] "GET /media/imagens/user.png HTTP/1.1" 200 2587
+[04/Apr/2026 11:58:00] "GET /cadastro/empresa/listaempresas/ HTTP/1.1" 200 26309
+[04/Apr/2026 11:58:00] "GET /static/css/theme-overrides.css?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:58:00] "GET /static/js/admin.js?v=20260404b HTTP/1.1" 304 0
+[04/Apr/2026 11:58:02] "GET / HTTP/1.1" 200 41780
+[04/Apr/2026 11:58:05] "GET /login/perfil/ HTTP/1.1" 200 24559
+[04/Apr/2026 11:58:10] "GET /fiscal/notafiscal/saida/listanotafiscal/ HTTP/1.1" 200 28008
+[04/Apr/2026 11:58:18] "GET /vendas/pedidovenda/adicionar/ HTTP/1.1" 200 68005
+[04/Apr/2026 11:58:18] "POST /cadastro/infocliente/ HTTP/1.1" 200 3489
+[04/Apr/2026 11:58:18] "POST /cadastro/infotransportadora/ HTTP/1.1" 200 754
+[04/Apr/2026 11:58:19] "GET /financeiro/contapagar/adicionar/ HTTP/1.1" 200 29047
+[04/Apr/2026 11:58:24] "GET /cadastro/fornecedor/adicionar/ HTTP/1.1" 200 53498

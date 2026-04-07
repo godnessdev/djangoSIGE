@@ -1,0 +1,229 @@
+.col-xs-1,
+.col-xs-2,
+.col-xs-3,
+.col-xs-4,
+.col-xs-5,
+.col-xs-6,
+.col-xs-7,
+.col-xs-8,
+.col-xs-9,
+.col-xs-10,
+.col-xs-11,
+.col-xs-12 {
+  position: relative;
+  min-height: 1px;
+}
+
+.col-xs-1 {
+  flex: 0 0 auto;
+  width: 8.33333333%;
+}
+
+.col-xs-2 {
+  flex: 0 0 auto;
+  width: 16.66666667%;
+}
+
+.col-xs-3 {
+  flex: 0 0 auto;
+  width: 25%;
+}
+
+.col-xs-4 {
+  flex: 0 0 auto;
+  width: 33.33333333%;
+}
+
+.col-xs-5 {
+  flex: 0 0 auto;
+  width: 41.66666667%;
+}
+
+.col-xs-6 {
+  flex: 0 0 auto;
+  width: 50%;
+}
+
+.col-xs-7 {
+  flex: 0 0 auto;
+  width: 58.33333333%;
+}
+
+.col-xs-8 {
+  flex: 0 0 auto;
+  width: 66.66666667%;
+}
+
+.col-xs-9 {
+  flex: 0 0 auto;
+  width: 75%;
+}
+
+.col-xs-10 {
+  flex: 0 0 auto;
+  width: 83.33333333%;
+}
+
+.col-xs-11 {
+  flex: 0 0 auto;
+  width: 91.66666667%;
+}
+
+.col-xs-12 {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.col-xs-offset-0 {
+  margin-left: 0;
+}
+
+.col-xs-offset-1 {
+  margin-left: 8.33333333%;
+}
+
+.col-xs-offset-2 {
+  margin-left: 16.66666667%;
+}
+
+.col-xs-offset-3 {
+  margin-left: 25%;
+}
+
+.col-xs-offset-4 {
+  margin-left: 33.33333333%;
+}
+
+.col-xs-offset-5 {
+  margin-left: 41.66666667%;
+}
+
+.col-xs-offset-6 {
+  margin-left: 50%;
+}
+
+.col-xs-offset-7 {
+  margin-left: 58.33333333%;
+}
+
+.col-xs-offset-8 {
+  margin-left: 66.66666667%;
+}
+
+.col-xs-offset-9 {
+  margin-left: 75%;
+}
+
+.col-xs-offset-10 {
+  margin-left: 83.33333333%;
+}
+
+.col-xs-offset-11 {
+  margin-left: 91.66666667%;
+}
+
+.pull-left {
+  float: left !important;
+}
+
+.pull-right {
+  float: right !important;
+}
+
+.center-block {
+  display: block;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.navbar-right {
+  margin-left: auto;
+}
+
+.navbar-toggle {
+  display: none;
+}
+
+.navbar-collapse.show,
+.navbar-collapse.in {
+  display: block;
+}
+
+.dropdown-menu > li > a {
+  display: block;
+  width: 100%;
+  clear: both;
+  text-decoration: none;
+}
+
+.dropdown-menu.pull-right {
+  right: 0;
+  left: auto;
+}
+
+.dropdown.open > .dropdown-menu,
+.show > .dropdown-menu {
+  display: block;
+}
+
+.caret {
+  display: inline-block;
+  margin-left: 0.4rem;
+  width: 0;
+  height: 0;
+  vertical-align: middle;
+  border-top: 0.35em solid currentColor;
+  border-right: 0.35em solid transparent;
+  border-left: 0.35em solid transparent;
+}
+
+.input-group-addon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.close {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tab-content > .tab-pane {
+  display: none;
+}
+
+.tab-content > .active {
+  display: block;
+}
+
+.nav-tabs > li > a.active,
+.nav-tabs > li.active > a {
+  color: inherit;
+}
+
+@media (max-width: 767.98px) {
+  .navbar-toggle {
+    display: block;
+  }
+
+  .navbar-nav {
+    width: 100%;
+  }
+
+  .navbar-right {
+    margin-left: 0;
+  }
+
+  .dropdown-menu.pull-right {
+    right: auto;
+    left: 0;
+  }
+}

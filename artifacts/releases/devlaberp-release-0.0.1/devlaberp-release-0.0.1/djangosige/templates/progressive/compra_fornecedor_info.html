@@ -1,0 +1,99 @@
+<div id="fornecedor-info-panel" class="progressive-info-panel" x-data="{ loading: false }"
+     @htmx:before-request.window="if ($event.detail.elt && $event.detail.elt.id === 'id_fornecedor') loading = true"
+     @htmx:after-swap.window="if ($event.detail.target.id === 'fornecedor-info-panel') loading = false"
+     @htmx:response-error.window="if ($event.detail.target.id === 'fornecedor-info-panel') loading = false">
+  <p class="progressive-info-status is-loading" x-cloak x-show="loading">Carregando dados do fornecedor...</p>
+  {% if not summary %}
+  <p class="progressive-info-empty">Selecione um fornecedor para carregar os dados complementares.</p>
+  {% endif %}
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>CPF/CNPJ</label>
+        <span class="form-control display-fornecedor-field" id="cpf_cnpj_fornecedor">{{ summary.documento|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Inscrição estadual/RG</label>
+        <span class="form-control display-fornecedor-field" id="ie_rg_fornecedor">{{ summary.inscricao|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Representante</label>
+        <span class="form-control display-fornecedor-field" id="representante_fornecedor">{{ summary.representante|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Endereço</label>
+        <span class="form-control display-fornecedor-field" id="endereco_fornecedor">{{ summary.endereco|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Bairro</label>
+        <span class="form-control display-fornecedor-field" id="bairro_fornecedor">{{ summary.bairro|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Município</label>
+        <span class="form-control display-fornecedor-field" id="municipio_fornecedor">{{ summary.municipio|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>UF</label>
+        <span class="form-control display-fornecedor-field" id="uf_fornecedor">{{ summary.uf|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>CEP</label>
+        <span class="form-control display-fornecedor-field" id="cep_fornecedor">{{ summary.cep|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Email</label>
+        <span class="form-control display-fornecedor-field" id="email_fornecedor">{{ summary.email|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6">
+    <div class="form-group">
+      <div class="form-line">
+        <label>Telefone</label>
+        <span class="form-control display-fornecedor-field" id="telefone_fornecedor">{{ summary.telefone|default:"" }}</span>
+      </div>
+    </div>
+  </div>
+</div>

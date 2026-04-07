@@ -1,0 +1,154 @@
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.nome_razao_social.label}}</label><strong style="color:red;"> *</strong>
+      {% if form.nome_razao_social.errors %}<label class="error">{% for error in form.nome_razao_social.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.nome_razao_social}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.tipo_empresa.label}}</label>
+      {% if form.tipo_empresa.errors %}<label class="error">{% for error in form.tipo_empresa.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.tipo_empresa}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6" id="empresa-pai-wrapper" {% if form.tipo_empresa.value != 'FIL' %}style="display:none;"{% endif %}>
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.empresa_pai.label}}</label>
+      {% if form.empresa_pai.errors %}<label class="error">{% for error in form.empresa_pai.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.empresa_pai}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{pessoa_juridica_form.nome_fantasia.label}}</label>
+      {% if pessoa_juridica_form.nome_fantasia.errors %}<label class="error">{% for error in pessoa_juridica_form.nome_fantasia.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{pessoa_juridica_form.nome_fantasia}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group has-field-action">
+    <label>{{pessoa_juridica_form.cnpj.label}}</label>
+    {% if pessoa_juridica_form.cnpj.errors %}<label class="error">{% for error in pessoa_juridica_form.cnpj.errors %}{{error}}{% endfor %}</label>{% endif %}
+    {% with cnpj_field=pessoa_juridica_form.cnpj %}
+    {% include 'cadastro/partials/cnpj_lookup_field.html' %}
+    {% endwith %}
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{pessoa_juridica_form.inscricao_estadual.label}}</label>
+      {% if pessoa_juridica_form.inscricao_estadual.errors %}<label class="error">{% for error in pessoa_juridica_form.inscricao_estadual.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{pessoa_juridica_form.inscricao_estadual}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.inscricao_municipal.label}}</label>
+      {% if form.inscricao_municipal.errors %}<label class="error">{% for error in form.inscricao_municipal.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.inscricao_municipal}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{pessoa_juridica_form.responsavel.label}}</label>
+      {% if pessoa_juridica_form.responsavel.errors %}<label class="error">{% for error in pessoa_juridica_form.responsavel.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{pessoa_juridica_form.responsavel}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.cnae.label}}</label>
+      {% if form.cnae.errors %}<label class="error">{% for error in form.cnae.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.cnae}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{pessoa_juridica_form.sit_fiscal.label}}</label>
+      {% if pessoa_juridica_form.sit_fiscal.errors %}<label class="error">{% for error in pessoa_juridica_form.sit_fiscal.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{pessoa_juridica_form.sit_fiscal}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.iest.label}}</label>
+      {% if form.iest.errors %}<label class="error">{% for error in form.iest.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.iest}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{pessoa_juridica_form.suframa.label}}</label>
+      {% if pessoa_juridica_form.suframa.errors %}<label class="error">{% for error in pessoa_juridica_form.suframa.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{pessoa_juridica_form.suframa}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-9">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.logo_file.label}}</label>
+      {% if form.logo_file.errors %}<label class="error">{% for error in form.logo_file.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.logo_file}}
+    </div>
+  </div>
+</div>
+
+<div class="col-sm-6">
+  <div class="form-group">
+    <div class="form-line">
+      <label>{{form.informacoes_adicionais.label}}</label>
+      {% if form.informacoes_adicionais.errors %}<label class="error">{% for error in form.informacoes_adicionais.errors %}{{error}}{% endfor %}</label>{% endif %}
+      {{form.informacoes_adicionais}}
+    </div>
+  </div>
+</div>
+
+{% if object %}
+<div class="col-sm-12">
+  <div class="alert alert-info" style="margin-top: 10px;">
+    <strong>Estrutura atual:</strong>
+    {{ object.get_tipo_empresa_display }}
+    {% if object.matriz_vinculada %}
+    | Matriz: {{ object.matriz_vinculada.nome_razao_social }}
+    {% endif %}
+    {% if filiais_vinculadas %}
+    | Filiais: {% for filial in filiais_vinculadas %}{{ filial.nome_razao_social }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}

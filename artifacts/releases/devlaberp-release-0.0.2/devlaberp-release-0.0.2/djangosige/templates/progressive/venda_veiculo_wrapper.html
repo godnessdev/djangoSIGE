@@ -1,0 +1,17 @@
+<div id="veiculo-wrapper" class="progressive-info-panel" x-data="{ loading: false }"
+     @htmx:before-request.window="if ($event.detail.elt && $event.detail.elt.id === 'id_transportadora') loading = true"
+     @htmx:after-swap.window="if ($event.detail.target.id === 'veiculo-wrapper') loading = false"
+     @htmx:response-error.window="if ($event.detail.target.id === 'veiculo-wrapper') loading = false">
+  <div class="form-group">
+    <div class="form-line">
+      <label>Veículo</label>
+      <p class="progressive-inline-status is-loading" x-cloak x-show="loading">Atualizando veículos...</p>
+      <select name="veiculo" id="id_veiculo" class="form-control">
+        <option value=""></option>
+        {% for vehicle in vehicles %}
+        <option value="{{ vehicle.id }}"{% if selected_id|stringformat:"s" == vehicle.id|stringformat:"s" %} selected{% endif %}>{{ vehicle.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>

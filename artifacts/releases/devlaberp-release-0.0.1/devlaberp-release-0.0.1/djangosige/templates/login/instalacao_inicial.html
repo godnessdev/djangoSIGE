@@ -1,0 +1,215 @@
+{%extends 'base/base.html'%}
+
+{%block title%}Instalacao Inicial{%endblock%}
+{%block side_top_bars%}{%endblock%}
+{%block body_class%}login-page ls-closed{%endblock%}
+
+{%block content%}
+<div class="auth-shell auth-shell--setup">
+    <div class="auth-shell__intro">
+        {% include 'login/logo.html' %}
+        <span class="auth-shell__eyebrow">Instalacao inicial</span>
+        <h1 class="auth-shell__title">Configure a base da operacao sem improviso.</h1>
+        <p class="auth-shell__text">Primeiro definimos a empresa principal. Em seguida, criamos o administrador que vai operar e distribuir acessos.</p>
+    </div>
+
+    <div class="login-box">
+        <div class="card auth-card auth-card--setup">
+            <div class="body">
+                <form method="POST" class="js-auth-submit-form">
+                    {% csrf_token %}
+                    <div class="auth-stepper" aria-label="Progresso da instalacao">
+                        <div class="auth-stepper__meta">
+                            {% if install_step == 'empresa' %}
+                            <span class="auth-stepper__counter">Passo 1 de 3</span>
+                            <span class="auth-stepper__hint">Empresa principal</span>
+                            {% else %}
+                            <span class="auth-stepper__counter">Passo 2 de 3</span>
+                            <span class="auth-stepper__hint">Usuario administrador</span>
+                            {% endif %}
+                        </div>
+                        <div class="auth-stepper__track">
+                            {% if install_step == 'empresa' %}
+                            <span class="auth-stepper__progress auth-stepper__progress--step-1"></span>
+                            {% else %}
+                            <span class="auth-stepper__progress auth-stepper__progress--step-2"></span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="msg auth-card__msg">
+                        {% if install_step == 'empresa' %}
+                        Primeiro acesso: cadastre a empresa principal
+                        {% else %}
+                        Primeiro acesso: crie o usuario administrador
+                        {% endif %}
+
+                        {% include 'base/form_error_msg.html' %}
+                    </div>
+
+                    {% if install_step == 'admin' and empresa_instalacao %}
+                    <div class="alert auth-card__status" style="margin-bottom: 20px;">
+                        Empresa criada: <b>{{ empresa_instalacao.nome_razao_social }}</b>
+                    </div>
+                    {% endif %}
+
+                    {% if install_step == 'empresa' %}
+                    <section class="auth-form-section">
+                        <div class="auth-form-section__header">
+                            <span class="auth-form-section__eyebrow">Dados principais</span>
+                            <h2 class="auth-form-section__title">Identificacao da empresa</h2>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.nome_razao_social.id_for_label }}">Razao social</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">business</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.nome_razao_social }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.nome_fantasia.id_for_label }}">Nome fantasia</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">store</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.nome_fantasia }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.cnpj.id_for_label }}">CNPJ</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">badge</i>
+                                </span>
+                                <div style="width: 100%;">
+                                    {% with cnpj_field=form.cnpj %}
+                                    {% include 'cadastro/partials/cnpj_lookup_field.html' %}
+                                    {% endwith %}
+                                    <div class="auth-inline-status js-cnpj-lookup-status" data-tone="idle">Digite o CNPJ para buscar os dados automaticamente.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="auth-form-section">
+                        <div class="auth-form-section__header">
+                            <span class="auth-form-section__eyebrow">Dados fiscais</span>
+                            <h2 class="auth-form-section__title">Configuracao inicial</h2>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.inscricao_estadual.id_for_label }}">Inscricao estadual</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">assignment</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.inscricao_estadual }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.tipo_empresa.id_for_label }}">Tipo de empresa</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">apartment</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.tipo_empresa }}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    {% else %}
+                    <section class="auth-form-section">
+                        <div class="auth-form-section__header">
+                            <span class="auth-form-section__eyebrow">Administrador</span>
+                            <h2 class="auth-form-section__title">Conta principal de acesso</h2>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.username.id_for_label }}">Usuario</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">person</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.username }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.first_name.id_for_label }}">Nome</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">badge</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.first_name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.email.id_for_label }}">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">email</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.email }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.password.id_for_label }}">Senha</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">lock</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.password }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label class="auth-field__label" for="{{ form.confirm.id_for_label }}">Confirmacao de senha</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <i class="material-icons">verified_user</i>
+                                </span>
+                                <div class="form-line">
+                                    {{ form.confirm }}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <button class="btn btn-block btn-primary auth-btn js-auth-submit-button" type="submit"
+                        data-loading-text="{% if install_step == 'empresa' %}Criando empresa...{% else %}Criando administrador...{% endif %}">
+                        {% if install_step == 'empresa' %}
+                        CRIAR EMPRESA
+                        {% else %}
+                        CRIAR ADMINISTRADOR
+                        {% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{%endblock%}

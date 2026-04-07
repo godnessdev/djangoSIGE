@@ -1,0 +1,31 @@
+{% load static %}
+<!-- JQuery Mask Input Js -->
+{% include 'base/load_jquery_mask.html' %}
+
+{% include 'base/load_jqueryui.html' %}
+
+{% include 'base/tooltip_js.html' %}
+
+{% include 'base/load_datetimepicker.html' %}
+
+{% include 'base/datetimepicker_js.html' %}
+
+<script type="text/javascript">
+	var req_urls = {}
+
+	{% if saida %}
+	req_urls.info_emit_url = "{% url 'cadastro:infoempresa' %}";
+	req_urls.info_dest_url = "{% url 'cadastro:infocliente' %}"
+	req_urls.info_venda_url = "{% url 'vendas:infovenda' %}"
+	var tipo_nf = 'saida';
+	{% elif entrada %}
+	req_urls.info_emit_url = "{% url 'cadastro:infofornecedor' %}"
+	req_urls.info_dest_url = "{% url 'cadastro:infoempresa' %}"
+	req_urls.info_compra_url = "{% url 'compras:infocompra' %}"
+	var tipo_nf = 'entrada';
+	{% endif %}
+
+  	ProgressiveEnhancement.initNotaFiscal(req_urls, tipo_nf);
+  	$.Admin.notaFiscalForm.init(req_urls, tipo_nf);
+  	$.Admin.maskInput.maskNotaFiscal();  
+</script>

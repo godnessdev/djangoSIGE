@@ -1,0 +1,26 @@
+<form action="" method="get" class="row" style="margin-bottom: 15px;">
+  <div class="col-sm-4">
+    <label for="id_tipo_empresa_filter">Tipo de empresa</label>
+    <select id="id_tipo_empresa_filter" name="tipo_empresa" class="form-control">
+      <option value="">Todos</option>
+      <option value="MAT" {% if tipo_empresa_filter == 'MAT' %}selected{% endif %}>Matriz</option>
+      <option value="FIL" {% if tipo_empresa_filter == 'FIL' %}selected{% endif %}>Filial</option>
+      <option value="IND" {% if tipo_empresa_filter == 'IND' %}selected{% endif %}>Independente</option>
+    </select>
+  </div>
+  <div class="col-sm-5">
+    <label for="id_grupo_empresa_filter">Grupo empresarial</label>
+    <select id="id_grupo_empresa_filter" name="grupo_empresa" class="form-control">
+      <option value="">Todos</option>
+      {% for grupo in grupos_empresariais %}
+      <option value="{{ grupo.pk }}" {% if grupo_empresa_filter == grupo.pk|stringformat:'s' %}selected{% endif %}>
+        {{ grupo.nome_razao_social }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3" style="padding-top: 24px;">
+    <button class="btn btn-primary" type="submit">Filtrar</button>
+    <a href="{% url 'cadastro:listaempresasview' %}" class="btn btn-default">Limpar</a>
+  </div>
+</form>

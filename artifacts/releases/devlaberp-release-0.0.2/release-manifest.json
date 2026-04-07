@@ -1,0 +1,22 @@
+{
+    "generated_at":  "2026-04-06T14:31:56",
+    "version":  "0.0.2",
+    "package_name":  "devlaberp-release-0.0.2",
+    "source_root":  "C:\\Users\\lojac\\OneDrive\\Documentos\\GitHub\\devlab-system",
+    "release_root":  "C:\\Users\\lojac\\OneDrive\\Documentos\\GitHub\\devlab-system\\artifacts\\releases\\devlaberp-release-0.0.2",
+    "app_root":  "C:\\Users\\lojac\\OneDrive\\Documentos\\GitHub\\devlab-system\\artifacts\\releases\\devlaberp-release-0.0.2\\devlaberp-release-0.0.2",
+    "scripts":  [
+                    "deploy-common.ps1",
+                    "provisionar-postgres.ps1",
+                    "instalar.ps1",
+                    "backup.ps1",
+                    "atualizar.ps1",
+                    "rollback.ps1",
+                    "iniciar-producao.ps1",
+                    "parar-producao.ps1",
+                    "healthcheck.ps1",
+                    "registrar-servico.ps1",
+                    "migrar-banco.ps1",
+                    "verificar-ambiente.ps1"
+                ]
+}

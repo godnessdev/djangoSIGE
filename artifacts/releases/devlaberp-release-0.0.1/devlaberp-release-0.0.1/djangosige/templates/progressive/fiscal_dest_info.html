@@ -1,0 +1,24 @@
+<div id="dest-info-panel" class="progressive-info-panel" x-data="{ loading: false }"
+     @htmx:before-request.window="if ($event.detail.elt && ($event.detail.elt.id === 'id_dest_saida' || $event.detail.elt.id === 'id_dest_entrada')) loading = true"
+     @htmx:after-swap.window="if ($event.detail.target.id === 'dest-info-panel') loading = false"
+     @htmx:response-error.window="if ($event.detail.target.id === 'dest-info-panel') loading = false">
+  <p class="progressive-info-status is-loading" x-cloak x-show="loading">Carregando dados do destinatário...</p>
+  {% if not summary %}
+  <p class="progressive-info-empty">Selecione um destinatário para carregar os dados fiscais.</p>
+  {% endif %}
+
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>CPF/CNPJ/ID Estrangeiro</label><span class="form-control display-dest-field" id="cpf_cnpj_id_dest">{{ summary.documento|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Inscrição Estadual/RG</label><span class="form-control display-dest-field" id="ie_rg_dest">{{ summary.inscricao|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Indicador da IE do Destinatário</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="ind_ie_dest">{{ summary.indicador_ie|default:"" }}</span></div></div></div>
+  <div class="col-sm-5"><div class="form-group"><div class="form-line"><label>Endereço</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="endereco_dest">{{ summary.logradouro|default:"" }}</span></div></div></div>
+  <div class="col-sm-3"><div class="form-group"><div class="form-line"><label>CEP</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="cep_dest">{{ summary.cep|default:"" }}</span></div></div></div>
+  <div class="col-sm-3"><div class="form-group"><div class="form-line"><label>Número</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="nro_dest">{{ summary.numero|default:"" }}</span></div></div></div>
+  <div class="col-sm-5"><div class="form-group"><div class="form-line"><label>Complemento</label><span class="form-control display-dest-field" id="cpl_dest">{{ summary.complemento|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Bairro</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="bairro_dest">{{ summary.bairro|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Cidade</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="cidade_dest">{{ summary.municipio|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Código município</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="cmun_dest">{{ summary.cmun|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Estado</label><strong style="color:red;"> *</strong><span class="form-control display-dest-field" id="estado_dest">{{ summary.uf|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>País</label><span class="form-control display-dest-field" id="pais_dest">{{ summary.pais|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Telefone</label><span class="form-control display-dest-field" id="tel_dest">{{ summary.telefone|default:"" }}</span></div></div></div>
+  <div class="col-sm-4"><div class="form-group"><div class="form-line"><label>Email</label><span class="form-control display-dest-field" id="email_dest">{{ summary.email|default:"" }}</span></div></div></div>
+</div>
