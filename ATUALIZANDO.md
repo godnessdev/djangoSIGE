@@ -1,6 +1,6 @@
 # Atualizando e Distribuindo para Clientes
 
-Atualizado em `2026-04-04`.
+Atualizado em `2026-04-07`.
 
 ## Cenario Alvo
 
@@ -11,6 +11,212 @@ Este guia considera o cenario real do produto:
 - `varios usuarios simultaneos`
 - `rede local`
 - `banco local no cliente`
+
+## Regra Operacional do Projeto
+
+Estas regras passam a ser obrigatorias em toda manutencao do produto.
+
+### Regra 1 - Nunca alterar banco manualmente para entregar funcionalidade
+
+Mudanca de estrutura de banco:
+
+- sempre nasce no codigo
+- sempre vira `migration`
+- sempre e aplicada com `manage.py migrate`
+
+Nao fazer:
+
+- criar coluna manualmente no `PostgreSQL`
+- apagar coluna direto no banco
+- corrigir estrutura no `pgAdmin` para depois "acertar no codigo"
+
+Fazer:
+
+1. alterar `models.py`
+2. gerar migration
+3. revisar migration
+4. aplicar localmente
+5. rodar testes
+6. entregar release
+7. aplicar no cliente com `migrar-banco.ps1`
+
+### Regra 2 - Toda mudanca de banco exige migration versionada
+
+Sempre que houver qualquer uma destas mudancas:
+
+- criar model
+- remover model
+- adicionar campo
+- remover campo
+- alterar tipo de campo
+- alterar `null`, `blank`, `default`, `unique`, `db_index`
+- alterar relacionamento `ForeignKey`, `ManyToMany`, `OneToOne`
+- criar constraint ou indice
+
+e obrigatorio gerar migration.
+
+Comando:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py makemigrations
+```
+
+Ou por app:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py makemigrations cadastro
+.\.venv\Scripts\python.exe manage.py makemigrations vendas
+```
+
+Depois conferir se nao ficou faltando nada:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py makemigrations --check
+```
+
+### Regra 3 - Toda release que muda banco exige esta sequencia
+
+No desenvolvimento:
+
+1. alterar models
+2. gerar migration
+3. aplicar localmente com `migrate`
+4. rodar a suite impactada
+5. rodar `makemigrations --check`
+6. gerar release
+
+No cliente:
+
+1. parar o sistema
+2. atualizar codigo
+3. executar `migrar-banco.ps1`
+4. validar ambiente
+5. subir novamente
+6. executar smoke operacional
+
+### Regra 4 - Toda release que muda estaticos exige `collectstatic`
+
+No cliente isso nao e opcional.
+
+O script [migrar-banco.ps1](C:/Users/lojac/OneDrive/Documentos/GitHub/devlab-system/migrar-banco.ps1) agora faz:
+
+- `manage.py migrate --noinput`
+- `manage.py collectstatic --noinput`
+
+Entao a regra pratica ficou:
+
+- apos atualizar codigo, sempre rodar `migrar-banco.ps1`
+- mesmo quando a release nao muda banco, se ela muda template/CSS/JS, o `collectstatic` precisa acontecer
+
+### Regra 5 - Atualizacao de dependencia nao e chute
+
+Se a release alterou `requirements.txt`, no servidor precisa rodar:
+
+```powershell
+C:\DevLabERP\venv\Scripts\python.exe -m pip install -r C:\DevLabERP\app\requirements.txt
+```
+
+Se `requirements.txt` nao mudou, a `venv` nao precisa ser recriada.
+
+## Fluxo Obrigatorio de Desenvolvimento
+
+### Caso A - Mudanca sem banco
+
+Sequencia:
+
+1. alterar codigo
+2. rodar testes impactados
+3. rodar `makemigrations --check`
+4. gerar release
+5. atualizar cliente
+6. rodar `migrar-banco.ps1` no cliente mesmo assim, para garantir `collectstatic`
+
+### Caso B - Mudanca com banco
+
+Sequencia:
+
+1. alterar `models.py`
+2. gerar migration
+3. revisar arquivos em `migrations/`
+4. aplicar `migrate` localmente
+5. rodar testes impactados
+6. rodar `makemigrations --check`
+7. gerar release
+8. atualizar cliente
+9. rodar `migrar-banco.ps1`
+10. validar smoke operacional
+
+### Caso C - Mudanca com banco e dependencia
+
+Sequencia:
+
+1. alterar codigo
+2. alterar `requirements.txt`, se necessario
+3. gerar migration, se houver mudanca estrutural
+4. testar localmente
+5. gerar release
+6. no cliente, atualizar codigo
+7. instalar dependencias novas
+8. rodar `migrar-banco.ps1`
+9. verificar ambiente
+10. subir aplicacao
+
+## Checklist Obrigatorio Antes de Gerar Release
+
+- [ ] codigo commitado ou ao menos estabilizado localmente
+- [ ] migrations novas geradas, se houve mudanca estrutural
+- [ ] `makemigrations --check` sem pendencia
+- [ ] testes da mudanca executados
+- [ ] smoke local executado, quando a mudanca afetar fluxo critico
+- [ ] `requirements.txt` revisado
+- [ ] documentacao atualizada se o procedimento operacional mudou
+
+## Checklist Obrigatorio Antes de Atualizar Cliente
+
+- [ ] confirmar release origem e release destino
+- [ ] confirmar se houve mudanca de banco
+- [ ] confirmar se houve mudanca de dependencias
+- [ ] confirmar caminho do `pg_dump.exe`, quando houver backup PostgreSQL
+- [ ] confirmar `.env` preservado
+- [ ] confirmar backup
+- [ ] confirmar janela de manutencao
+
+## Fluxo Oficial de Atualizacao no Cliente
+
+Sem pular etapa:
+
+1. `parar-producao.ps1`
+2. `atualizar.ps1`
+3. `pip install -r requirements.txt`, se houve mudanca de dependencia
+4. `migrar-banco.ps1`
+5. `verificar-ambiente.ps1`
+6. `iniciar-producao.ps1`
+7. `healthcheck.ps1`
+8. smoke funcional
+
+## Smoke Funcional Minimo Pos-Update
+
+Depois de cada atualizacao, validar no minimo:
+
+- [ ] `/healthz/`
+- [ ] `/login/`
+- [ ] primeiro acesso ou login normal
+- [ ] abertura da empresa ativa
+- [ ] uma tela de cadastro
+- [ ] uma tela operacional de vendas ou compras
+- [ ] uma tela financeira
+- [ ] uma tela fiscal, se o cliente usar modulo fiscal
+
+## O que nunca pode ficar "implícito"
+
+Sempre registrar no projeto:
+
+- se a release muda banco
+- se a release muda dependencia
+- se a release exige `collectstatic`
+- se a release exige ajuste manual de `.env`
+- se a release exige saneamento de dados
+- se a release exige rollback especifico
 
 ## Fases de Execucao
 

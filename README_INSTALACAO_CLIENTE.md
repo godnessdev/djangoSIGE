@@ -1,6 +1,6 @@
 # Instalacao no Cliente
 
-Atualizado em `2026-04-06`.
+Atualizado em `2026-04-07`.
 
 ## Objetivo
 
@@ -147,6 +147,11 @@ py -3.12 -m venv venv
 .\venv\Scripts\python.exe -m pip install -r .\app\requirements.txt
 ```
 
+Se a `venv` ja existir em uma atualizacao futura:
+
+- nao recriar por padrao
+- apenas rodar `pip install -r` quando `requirements.txt` mudar
+
 ## Passo 7 - Rodar migracoes e gerar estaticos
 
 ```powershell
@@ -157,6 +162,8 @@ Esse passo:
 
 - aplica as migracoes
 - executa `collectstatic --noinput`
+
+Nao pular este passo, porque a aplicacao em producao depende do manifest de estaticos gerado por `collectstatic`.
 
 ## Passo 8 - Verificar o ambiente
 

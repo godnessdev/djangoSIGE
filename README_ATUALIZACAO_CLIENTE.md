@@ -1,6 +1,6 @@
 # Atualizacao do Cliente
 
-Atualizado em `2026-04-06`.
+Atualizado em `2026-04-07`.
 
 ## Objetivo
 
@@ -27,6 +27,38 @@ Atualizacao correta:
 Se houver falha:
 
 7. executar `rollback.ps1`
+
+## Regra de banco
+
+Alteracao de banco nunca e feita manualmente no cliente.
+
+Quando a versao nova muda estrutura:
+
+- a estrutura ja vem versionada em `migrations`
+- o cliente recebe isso via release
+- a aplicacao do banco acontece com `migrar-banco.ps1`
+
+Ou seja:
+
+- `nao` criar coluna no `pgAdmin` para "ajudar"
+- `nao` editar tabela direto no `PostgreSQL`
+- `nao` rodar SQL avulso sem estar documentado
+
+## Regra de dependencia
+
+Se a release mudou `requirements.txt`, rode tambem:
+
+```powershell
+C:\DevLabERP\venv\Scripts\python.exe -m pip install -r C:\DevLabERP\app\requirements.txt
+```
+
+A `venv` so precisa ser recriada se:
+
+- o Python do servidor estiver errado
+- a `venv` estiver corrompida
+- a instalacao anterior tiver sido perdida
+
+Em atualizacao normal, a `venv` e reaproveitada.
 
 ## Passo 1 - Gerar a nova release
 
@@ -62,28 +94,47 @@ Esse comando:
 - troca o codigo da aplicacao
 - atualiza os scripts em `C:\ProgramData\DevLabERP\scripts`
 
-## Passo 5 - Rodar migracoes
+## Passo 5 - Instalar dependencias, se houver mudanca
+
+Se a release alterou `requirements.txt`:
+
+```powershell
+C:\DevLabERP\venv\Scripts\python.exe -m pip install -r C:\DevLabERP\app\requirements.txt
+```
+
+Se nao alterou, siga para o proximo passo.
+
+## Passo 6 - Rodar migracoes e gerar estaticos
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\migrar-banco.ps1 -InstallRoot C:\DevLabERP -DataRoot C:\ProgramData\DevLabERP -PythonPath C:\DevLabERP\venv\Scripts\python.exe
 ```
 
-## Passo 6 - Verificar ambiente e conexao
+Esse script faz:
+
+- `manage.py migrate --noinput`
+- `manage.py collectstatic --noinput`
+
+Logo, ele e obrigatorio mesmo em releases que mudam template, CSS ou JS.
+
+## Passo 7 - Verificar ambiente e conexao
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\verificar-ambiente.ps1 -InstallRoot C:\DevLabERP -DataRoot C:\ProgramData\DevLabERP -PythonPath C:\DevLabERP\venv\Scripts\python.exe
 ```
 
-## Passo 7 - Subir novamente
+## Passo 8 - Subir novamente
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\iniciar-producao.ps1 -InstallRoot C:\DevLabERP -DataRoot C:\ProgramData\DevLabERP -PythonPath C:\DevLabERP\venv\Scripts\python.exe -ListenHost 0.0.0.0 -Port 8000
 ```
 
-## Passo 8 - Validacao pos-update
+## Passo 9 - Validacao pos-update
 
 Validacoes minimas:
 
+- [ ] `http://127.0.0.1:8000/healthz/`
+- [ ] `http://127.0.0.1:8000/login/`
 - [ ] login abre
 - [ ] healthcheck responde
 - [ ] matriz abre
@@ -130,6 +181,25 @@ Depois:
 powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\iniciar-producao.ps1 -InstallRoot C:\DevLabERP -DataRoot C:\ProgramData\DevLabERP -PythonPath C:\DevLabERP\venv\Scripts\python.exe -ListenHost 0.0.0.0 -Port 8000
 ```
 
+## Sequencia oficial sem atalhos
+
+Toda atualizacao correta segue exatamente esta ordem:
+
+1. parar
+2. backup
+3. atualizar codigo
+4. instalar dependencia nova, se houver
+5. migrar banco e gerar estaticos
+6. verificar ambiente
+7. subir novamente
+8. validar login e fluxo minimo
+
+Nao inverter:
+
+- `migrate` antes de trocar codigo
+- `iniciar-producao` antes de `migrar-banco`
+- smoke funcional antes de `healthcheck`
+
 ## Checklist de atualizacao
 
 - [ ] nova release gerada
@@ -137,6 +207,7 @@ powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\inicia
 - [ ] sistema parado
 - [ ] `atualizar.ps1` executado
 - [ ] backup automatico confirmado
+- [ ] dependencias atualizadas, se necessario
 - [ ] `migrar-banco.ps1` executado
 - [ ] `verificar-ambiente.ps1` executado
 - [ ] sistema iniciado novamente
