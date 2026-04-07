@@ -147,11 +147,16 @@ py -3.12 -m venv venv
 .\venv\Scripts\python.exe -m pip install -r .\app\requirements.txt
 ```
 
-## Passo 7 - Rodar migracoes
+## Passo 7 - Rodar migracoes e gerar estaticos
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\ProgramData\DevLabERP\scripts\migrar-banco.ps1 -InstallRoot C:\DevLabERP -DataRoot C:\ProgramData\DevLabERP -PythonPath C:\DevLabERP\venv\Scripts\python.exe
 ```
+
+Esse passo:
+
+- aplica as migracoes
+- executa `collectstatic --noinput`
 
 ## Passo 8 - Verificar o ambiente
 

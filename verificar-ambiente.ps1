@@ -42,8 +42,10 @@ if (-not $envValues['ALLOWED_HOSTS']) {
 }
 
 $originalEnvPath = $env:SIGE_ENV_PATH
+$originalDjangoSettingsModule = $env:DJANGO_SETTINGS_MODULE
 try {
     $env:SIGE_ENV_PATH = $resolvedEnvPath
+    $env:DJANGO_SETTINGS_MODULE = 'djangosige.configs'
     Push-Location $appRoot
     & $pythonExecutable manage.py check
     & $pythonExecutable -c "import os; os.environ.setdefault('SIGE_ENV_PATH', r'$resolvedEnvPath'); import django; django.setup(); from django.db import connection; connection.ensure_connection(); cursor = connection.cursor(); cursor.execute('SELECT 1'); print('DB_OK')"
@@ -51,4 +53,5 @@ try {
 finally {
     Pop-Location
     $env:SIGE_ENV_PATH = $originalEnvPath
+    $env:DJANGO_SETTINGS_MODULE = $originalDjangoSettingsModule
 }

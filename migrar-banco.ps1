@@ -33,6 +33,7 @@ try {
     $env:SIGE_ENV_PATH = $resolvedEnvPath
     Push-Location $appRoot
     & $pythonExecutable manage.py migrate --noinput
+    & $pythonExecutable manage.py collectstatic --noinput
 }
 finally {
     Pop-Location

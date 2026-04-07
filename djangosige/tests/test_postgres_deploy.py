@@ -1,3 +1,4 @@
+import os
 import socket
 import subprocess
 import tempfile
@@ -15,6 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 class PostgresDeployTestCase(SimpleTestCase):
     def run_script(self, script_name, *args):
         script_path = PROJECT_ROOT / script_name
+        env = dict(os.environ)
+        env.pop('DJANGO_SETTINGS_MODULE', None)
         completed = subprocess.run(
             [
                 'powershell',
@@ -29,6 +32,7 @@ class PostgresDeployTestCase(SimpleTestCase):
             capture_output=True,
             text=True,
             check=True,
+            env=env,
         )
         return completed.stdout.strip()
 
@@ -71,6 +75,18 @@ class PostgresDeployTestCase(SimpleTestCase):
             except Exception:
                 time.sleep(0.5)
         self.fail(f'Healthcheck nao respondeu em tempo: {url}')
+
+    def wait_for_page(self, url, expected_text, timeout=20):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                with urlopen(url, timeout=2) as response:
+                    body = response.read().decode('utf-8')
+                    if response.status == 200 and expected_text in body:
+                        return
+            except Exception:
+                time.sleep(0.5)
+        self.fail(f'Pagina nao respondeu em tempo: {url}')
 
     def test_postgres_migrate_verify_and_start(self):
         container_name = f"devlab-pg-test-{uuid.uuid4().hex[:8]}"
@@ -154,6 +170,10 @@ class PostgresDeployTestCase(SimpleTestCase):
                     '-Port', str(app_port),
                 )
                 self.wait_for_health(f'http://127.0.0.1:{app_port}/healthz/')
+                self.wait_for_page(
+                    f'http://127.0.0.1:{app_port}/login/',
+                    'Primeiro acesso: cadastre a empresa principal',
+                )
                 self.run_script('parar-producao.ps1', '-DataRoot', str(data_root))
         finally:
             subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True, text=True)
